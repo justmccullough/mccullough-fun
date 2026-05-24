@@ -1,0 +1,64 @@
+/* ---------- Photo grid ---------- */
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1.8rem 1.4rem;
+}
+
+/* ---------- Polaroid card ---------- */
+.photo-card {
+  --tilt: 0deg;
+  background: var(--paper);
+  border: none;
+  padding: 0.7rem 0.7rem 0.4rem;
+  border-radius: 6px;
+  box-shadow: var(--shadow-soft);
+  transform: rotate(var(--tilt));
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+  text-align: center;
+}
+
+.photo-card:hover,
+.photo-card:focus-visible {
+  transform: rotate(0deg) translateY(-6px) scale(1.03);
+  box-shadow: var(--shadow-lift);
+  z-index: 2;
+}
+
+.photo-frame {
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.photo-placeholder,
+.photo-image {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+}
+
+.photo-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.photo-emoji {
+  font-size: 3.6rem;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+}
+
+.photo-caption {
+  font-family: var(--font-hand);
+  font-size: 1.4rem;
+  color: var(--ink);
+  margin-top: 0.5rem;
+  line-height: 1.2;
+}
+
+.photo-date {
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+  margin-bottom: 0.3rem;
+}

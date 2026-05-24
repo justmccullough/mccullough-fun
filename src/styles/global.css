@@ -1,0 +1,114 @@
+:root {
+  /* Warm & cozy palette */
+  --cream: #fbf3e4;
+  --cream-deep: #f1e2c6;
+  --paper: #fffaf0;
+  --ink: #4a3526;
+  --ink-soft: #806a55;
+  --terracotta: #c9714f;
+  --terracotta-dark: #a8552f;
+  --mustard: #d99e3c;
+  --sage: #7e8c5a;
+  --plum: #8a5a6a;
+
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-body: 'Nunito', system-ui, -apple-system, Segoe UI, sans-serif;
+  --font-hand: 'Caveat', 'Segoe Script', cursive;
+
+  --shadow-soft: 0 10px 30px rgba(74, 53, 38, 0.14);
+  --shadow-lift: 0 18px 42px rgba(74, 53, 38, 0.24);
+  --radius: 18px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--ink);
+  background-color: var(--cream);
+  background-image:
+    radial-gradient(circle at 12% 18%, rgba(217, 158, 60, 0.16), transparent 42%),
+    radial-gradient(circle at 88% 8%, rgba(201, 113, 79, 0.16), transparent 40%),
+    radial-gradient(circle at 70% 95%, rgba(126, 140, 90, 0.14), transparent 45%);
+  background-attachment: fixed;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--ink);
+}
+
+a {
+  color: var(--terracotta-dark);
+  text-decoration: none;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+button {
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+
+.page {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 4rem;
+}
+
+/* Shared button */
+.btn {
+  display: inline-block;
+  font-weight: 700;
+  font-size: 1rem;
+  padding: 0.85rem 1.8rem;
+  border-radius: 999px;
+  border: none;
+  background: var(--terracotta);
+  color: var(--paper);
+  box-shadow: var(--shadow-soft);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.btn:hover {
+  background: var(--terracotta-dark);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lift);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--terracotta-dark);
+  box-shadow: none;
+  border: 2px solid var(--terracotta);
+}
+
+.btn-ghost:hover {
+  background: rgba(201, 113, 79, 0.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

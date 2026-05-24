@@ -1,0 +1,78 @@
+// The McCullough family's most prized collection: cows.
+// To use real photos, drop files in `public/photos/` and add a `src` field,
+// e.g. src: '/photos/bessie.jpg'. Otherwise the cozy placeholder is shown.
+
+export const cows = [
+  {
+    id: 1,
+    emoji: '🐄',
+    caption: 'Bessie, undisputed queen of the back pasture',
+    date: 'Jun 2025',
+    category: 'The Herd',
+    gradient: 'linear-gradient(150deg, #97a56e, #7e8c5a)',
+  },
+  {
+    id: 2,
+    emoji: '🐮',
+    caption: 'Clover the calf — three hours old',
+    date: 'May 2025',
+    category: 'Calf Days',
+    gradient: 'linear-gradient(150deg, #e7b65a, #97a56e)',
+  },
+  {
+    id: 3,
+    emoji: '🐄',
+    caption: 'Buttercup photobombs the family reunion',
+    date: 'Jul 2025',
+    category: 'The Herd',
+    gradient: 'linear-gradient(150deg, #d99e3c, #7e8c5a)',
+  },
+  {
+    id: 4,
+    emoji: '🐂',
+    caption: 'Big Mac — all 2,000 pounds of pure charm',
+    date: 'Apr 2025',
+    category: 'The Herd',
+    gradient: 'linear-gradient(150deg, #8a5a6a, #4a3526)',
+  },
+  {
+    id: 5,
+    emoji: '🐮',
+    caption: 'Daisy meets the new puppy (mutual suspicion)',
+    date: 'Aug 2025',
+    category: 'The Herd',
+    gradient: 'linear-gradient(150deg, #c9714f, #d99e3c)',
+  },
+  {
+    id: 6,
+    emoji: '🌾',
+    caption: 'Morning roll call in the back forty',
+    date: 'Sep 2025',
+    category: 'Out & About',
+    gradient: 'linear-gradient(150deg, #97a56e, #e7b65a)',
+  },
+  {
+    id: 7,
+    emoji: '🐄',
+    caption: 'The cow we met on the road trip to Vermont',
+    date: 'Aug 2025',
+    category: 'Out & About',
+    gradient: 'linear-gradient(150deg, #7e8c5a, #8a5a6a)',
+  },
+  {
+    id: 8,
+    emoji: '🥛',
+    caption: 'Fresh from the dairy farm tour',
+    date: 'Mar 2025',
+    category: 'Out & About',
+    gradient: 'linear-gradient(150deg, #e7b65a, #d99e3c)',
+  },
+  {
+    id: 9,
+    emoji: '🐄',
+    caption: 'Moo-tiful sunset over the field',
+    date: 'Oct 2025',
+    category: 'Out & About',
+    gradient: 'linear-gradient(150deg, #c9714f, #8a5a6a)',
+  },
+]

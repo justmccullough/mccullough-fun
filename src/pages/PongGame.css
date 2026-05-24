@@ -1,0 +1,129 @@
+.pong {
+  text-align: center;
+}
+
+.pong-head {
+  margin-bottom: 1.4rem;
+}
+
+.pong-kicker {
+  font-family: var(--font-hand);
+  font-size: 1.6rem;
+  color: var(--sage);
+}
+
+.pong-title {
+  font-size: clamp(2.2rem, 5vw, 3.2rem);
+  margin: 0.1rem 0 0.5rem;
+}
+
+.pong-intro {
+  max-width: 36rem;
+  margin: 0 auto;
+  color: var(--ink-soft);
+}
+
+/* ---------- Scoreboard ---------- */
+.pong-scoreboard {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.3rem;
+  margin: 0 auto 1.3rem;
+}
+
+.pong-score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 7rem;
+  padding: 0.55rem 1.3rem;
+  background: var(--paper);
+  border: 2px solid var(--cream-deep);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft);
+}
+
+.pong-score-name {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.pong-score-value {
+  font-family: var(--font-display);
+  font-size: 2.6rem;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.pong-score-player .pong-score-value {
+  color: var(--terracotta-dark);
+}
+
+.pong-score-cpu .pong-score-value {
+  color: var(--sage);
+}
+
+.pong-score-sep {
+  font-family: var(--font-hand);
+  font-size: 1.7rem;
+  color: var(--ink-soft);
+}
+
+/* ---------- Game stage ---------- */
+.pong-stage {
+  position: relative;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.pong-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #46311f;
+  border: 3px solid var(--cream-deep);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft);
+  touch-action: none;
+}
+
+.pong-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 1.5rem;
+  text-align: center;
+  background: rgba(70, 49, 31, 0.86);
+  border-radius: var(--radius);
+  color: var(--paper);
+}
+
+.pong-overlay-emoji {
+  font-size: 3rem;
+}
+
+.pong-overlay-title {
+  color: var(--paper);
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+}
+
+.pong-overlay-text {
+  max-width: 24rem;
+  color: rgba(251, 243, 228, 0.85);
+  margin-bottom: 0.7rem;
+}
+
+.pong-hint {
+  margin-top: 1rem;
+  font-size: 0.92rem;
+  color: var(--ink-soft);
+}

@@ -1,0 +1,21 @@
+{
+  "name": "mccullough-fun",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "mccullough.fun — a cozy little site for the McCullough family",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.6.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.4.0",
+    "vite": "^6.3.0"
+  }
+}

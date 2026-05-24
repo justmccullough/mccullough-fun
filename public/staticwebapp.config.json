@@ -1,0 +1,14 @@
+{
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": [
+      "/assets/*",
+      "/photos/*",
+      "/*.{ico,png,jpg,jpeg,svg,gif,webp,css,js,map,json,txt,xml,woff,woff2,ttf,otf,eot}"
+    ]
+  },
+  "mimeTypes": {
+    ".svg": "image/svg+xml",
+    ".json": "application/json"
+  }
+}

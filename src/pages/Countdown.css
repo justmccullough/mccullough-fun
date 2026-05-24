@@ -1,0 +1,112 @@
+.countdown {
+  text-align: center;
+}
+
+/* ---------- Header ---------- */
+.countdown-head {
+  margin-bottom: 2.4rem;
+}
+
+.countdown-kicker {
+  font-family: var(--font-hand);
+  font-size: 1.7rem;
+  color: var(--sage);
+}
+
+.countdown-title {
+  font-size: clamp(2.4rem, 6vw, 3.6rem);
+  margin: 0.1rem 0 0.5rem;
+}
+
+.countdown-intro {
+  max-width: 34rem;
+  margin: 0 auto;
+  color: var(--ink-soft);
+}
+
+/* ---------- Countdown grid ---------- */
+.countdown-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.1rem;
+  max-width: 40rem;
+  margin: 0 auto;
+}
+
+.countdown-unit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 1.6rem 0.6rem;
+  background: var(--paper);
+  border: 2px solid var(--cream-deep);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft);
+}
+
+.countdown-value {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 7vw, 3.4rem);
+  font-weight: 600;
+  line-height: 1;
+  color: var(--terracotta-dark);
+  font-variant-numeric: tabular-nums;
+}
+
+.countdown-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.countdown-note {
+  margin-top: 2.2rem;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  color: var(--ink);
+}
+
+/* ---------- Christmas day ---------- */
+.xmas-day {
+  background: var(--sage);
+  background-image: linear-gradient(160deg, #97a56e, #7e8c5a);
+  color: var(--paper);
+  padding: 3.2rem 2rem;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft);
+  max-width: 44rem;
+  margin: 0 auto;
+}
+
+.xmas-emoji {
+  font-size: 3.2rem;
+}
+
+.xmas-day-title {
+  color: var(--paper);
+  font-size: clamp(2.4rem, 7vw, 3.6rem);
+  margin: 0.4rem 0 0.6rem;
+}
+
+.xmas-day-text {
+  max-width: 30rem;
+  margin: 0 auto 1.6rem;
+}
+
+.xmas-day .btn {
+  background: var(--paper);
+  color: var(--terracotta-dark);
+}
+
+.xmas-day .btn:hover {
+  background: var(--cream);
+}
+
+@media (max-width: 540px) {
+  .countdown-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

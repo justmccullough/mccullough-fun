@@ -1,0 +1,134 @@
+/* The sticky navbar's backdrop-filter visually bleeds through overlapping
+   layers in some browsers. Suppress it while the lightbox is open so the
+   overlay covers the navbar cleanly. */
+body.has-lightbox .navbar {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.lightbox-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(40, 27, 18, 0.88);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  animation: fade-in 0.18s ease;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.lightbox-figure {
+  background: var(--paper);
+  padding: 0.9rem 0.9rem 1rem;
+  border-radius: 8px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+  max-width: min(520px, 90vw);
+}
+
+.lightbox-image,
+.lightbox-placeholder {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.lightbox-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 6rem;
+}
+
+.lightbox-caption {
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+  margin-top: 0.7rem;
+}
+
+.lightbox-text {
+  font-family: var(--font-hand);
+  font-size: 1.8rem;
+  color: var(--ink);
+  line-height: 1.15;
+}
+
+.lightbox-meta {
+  font-size: 0.82rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-top: 0.15rem;
+}
+
+.lightbox-close,
+.lightbox-nav {
+  position: fixed;
+  background: rgba(255, 250, 240, 0.92);
+  color: var(--ink);
+  border: none;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-soft);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.lightbox-close {
+  top: 1.2rem;
+  right: 1.2rem;
+  width: 2.8rem;
+  height: 2.8rem;
+  font-size: 1.1rem;
+}
+
+.lightbox-nav {
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3.2rem;
+  height: 3.2rem;
+  font-size: 2rem;
+  line-height: 1;
+  padding-bottom: 0.2rem;
+}
+
+.lightbox-prev {
+  left: 1.2rem;
+}
+
+.lightbox-next {
+  right: 1.2rem;
+}
+
+.lightbox-close:hover,
+.lightbox-nav:hover {
+  background: #fff;
+  transform: scale(1.08);
+}
+
+.lightbox-nav:hover {
+  transform: translateY(-50%) scale(1.08);
+}
+
+@media (max-width: 540px) {
+  .lightbox-nav {
+    width: 2.7rem;
+    height: 2.7rem;
+    font-size: 1.6rem;
+  }
+  .lightbox-prev {
+    left: 0.5rem;
+  }
+  .lightbox-next {
+    right: 0.5rem;
+  }
+}
