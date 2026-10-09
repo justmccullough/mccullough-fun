@@ -4,9 +4,9 @@ public sealed partial class MooQuest
 {
     private static readonly Vector3 CameraOffset = new Vector3(0, 11.5f, -7.5f);
     private float time;
-    private Vector3 camVelocity;
+    private Vector3 camVelocity, camBase;
     private GUIStyle titleStyle, bigStyle, textStyle, smallStyle, nameStyle, buttonStyle, centerStyle, floatStyle, labelStyle;
-    private Texture2D heart, emptyHeart, bell, coin, acornIcon, round;
+    private Texture2D heart, emptyHeart, bell, emptyBell, coin, acornIcon, round;
     private float ui = 1;
 
     // ---------- Animation ----------
@@ -14,7 +14,7 @@ public sealed partial class MooQuest
     private void SnapCamera()
     {
         if (cam == null) return;
-        cam.transform.position = World(playerPos) + CameraOffset;
+        camBase = cam.transform.position = World(playerPos) + CameraOffset;
         cam.transform.LookAt(World(playerPos, .8f));
         camVelocity = Vector3.zero;
     }
@@ -54,9 +54,10 @@ public sealed partial class MooQuest
             Bit b = bits[i];
             b.life -= dt;
             if (b.life <= 0 || b.t == null) { if (b.t != null) MooArt.Kill(b.t.gameObject); bits.RemoveAt(i); continue; }
-            b.vel += Vector3.down * 14 * dt;
+            b.vel += Vector3.down * (b.spin ? 14 : 3) * dt;
             b.t.localPosition += b.vel * dt;
-            b.t.Rotate(400 * dt, 300 * dt, 0);
+            if (b.spin) b.t.Rotate(400 * dt, 300 * dt, 0);
+            else b.t.localScale *= 1 + dt * 2.5f;
         }
         for (int i = slides.Count - 1; i >= 0; i--)
         {
@@ -78,14 +79,31 @@ public sealed partial class MooQuest
             if (floats[i].time > floats[i].life) floats.RemoveAt(i);
         }
         if (state.status == "victory") AnimateParty();
+        // Blob shadows stay on the floor and shrink a little as their owner hops up.
+        for (int i = blobs.Count - 1; i >= 0; i--)
+        {
+            Blob b = blobs[i];
+            if (b.follow == null || b.t == null) { if (b.t != null) MooArt.Kill(b.t.gameObject); blobs.RemoveAt(i); continue; }
+            Vector3 p = b.follow.position;
+            float s = b.size * (1 - Mathf.Clamp01((p.y - b.floor) / 2.5f) * .45f);
+            b.t.position = new Vector3(p.x, b.floor, p.z);
+            b.t.localScale = new Vector3(s, .01f, s);
+            b.t.gameObject.SetActive(b.follow.gameObject.activeInHierarchy);
+        }
         if (areaIndex >= 0 && cam != null)
         {
             Vector3 focus = World(playerPos);
             Vector3 offset = state.status == "victory"
                 ? Quaternion.Euler(0, partyTime * 12, 0) * new Vector3(0, 9, -9)
                 : CameraOffset;
-            cam.transform.position = Vector3.SmoothDamp(cam.transform.position, focus + offset, ref camVelocity, .25f, 100, Mathf.Max(dt, .001f));
+            camBase = Vector3.SmoothDamp(camBase, focus + offset, ref camVelocity, .25f, 100, Mathf.Max(dt, .001f));
+            cam.transform.position = camBase;
             cam.transform.LookAt(focus + Vector3.up * .8f);
+            if (shake > 0)
+            {
+                cam.transform.position += Random.insideUnitSphere * shake * .3f;
+                shake = Mathf.MoveTowards(shake, 0, dt * 2.5f);
+            }
         }
     }
 
@@ -222,13 +240,23 @@ public sealed partial class MooQuest
         buttonStyle.normal.background = up; buttonStyle.hover.background = hover; buttonStyle.active.background = down;
         buttonStyle.focused.background = up;
         buttonStyle.normal.textColor = buttonStyle.hover.textColor = buttonStyle.active.textColor = buttonStyle.focused.textColor = Color.white;
-        heart = Icon(32, (x, y) => HeartShape(x, y), MooData.Hex("ff6fa8"));
-        emptyHeart = Icon(32, (x, y) => HeartShape(x, y), new Color(1, 1, 1, .35f));
+        Color ink = MooData.Hex("3b2a20");
+        heart = Icon(32, (x, y) => HeartShape(x * 1.12f, y * 1.12f), MooData.Hex("ff6fa8"), ink);
+        emptyHeart = Icon(32, (x, y) => HeartShape(x * 1.12f, y * 1.12f), new Color(1, 1, 1, .2f), new Color(1, 1, 1, .45f));
         round = Icon(32, (x, y) => x * x + y * y < 1, Color.white);
-        coin = Icon(32, (x, y) => x * x + y * y < 1 && !(x * x + y * y < .5f && x * x + y * y > .3f), MooArt.Gold);
-        bell = Icon(32, (x, y) => (y > -.7f && y < .6f && Mathf.Abs(x) < .35f + (.6f - y) * .35f) || (x * x + (y + .8f) * (y + .8f) < .05f), MooArt.Gold);
-        acornIcon = Icon(32, (x, y) => (x * x + (y + .15f) * (y + .15f) * 1.4f < .5f) || (y > .25f && y < .6f && Mathf.Abs(x) < .8f), MooArt.Gold);
+        coin = Icon(32, (x, y) => x * x + y * y < .8f && !(x * x + y * y < .4f && x * x + y * y > .25f), MooArt.Gold, ink);
+        bell = Icon(32, BellShape, MooArt.Gold, ink);
+        emptyBell = Icon(32, BellShape, new Color(1, 1, 1, .15f), new Color(1, 1, 1, .45f));
+        acornIcon = Icon(32, (x, y) => (x * x + (y + .15f) * (y + .15f) * 1.4f < .45f) || (y > .25f && y < .55f && Mathf.Abs(x) < .72f), MooArt.Gold, ink);
     }
+
+    // Domed top, flared skirt, rim, and clapper, so it reads as a bell rather than a pine tree.
+    private static bool BellShape(float x, float y) =>
+        (y > .2f && x * x + (y - .2f) * (y - .2f) < .2f) ||
+        (y <= .2f && y > -.5f && Mathf.Abs(x) < .45f + (.2f - y) * .3f) ||
+        (y <= -.5f && y > -.64f && Mathf.Abs(x) < .78f) ||
+        (x * x + (y + .76f) * (y + .76f) < .02f) ||
+        (y > .6f && y < .8f && Mathf.Abs(x) < .09f);
 
     private static bool HeartShape(float x, float y)
     {
@@ -245,15 +273,25 @@ public sealed partial class MooQuest
         return t;
     }
 
-    private static Texture2D Icon(int size, System.Func<float, float, bool> inside, Color color)
+    // Rasterizes a shape into a tiny icon, optionally with a dark outline so it pops on any background.
+    private static Texture2D Icon(int size, System.Func<float, float, bool> inside, Color color, Color? outline = null)
     {
         var t = new Texture2D(size, size, TextureFormat.RGBA32, false) { hideFlags = HideFlags.DontSave, filterMode = FilterMode.Bilinear };
         var clear = new Color(color.r, color.g, color.b, 0);
+        float o = 2.2f / size;
         for (int y = 0; y < size; y++)
             for (int x = 0; x < size; x++)
             {
                 float fx = (x + .5f) / size * 2 - 1, fy = (y + .5f) / size * 2 - 1;
-                t.SetPixel(x, y, inside(fx, fy) ? color : clear);
+                Color pixel = clear;
+                if (inside(fx, fy)) pixel = color;
+                else if (outline.HasValue)
+                    for (int k = 0; k < 8 && pixel.a == 0; k++)
+                    {
+                        float a = k * Mathf.PI / 4;
+                        if (inside(fx + Mathf.Cos(a) * o * 2, fy + Mathf.Sin(a) * o * 2)) pixel = outline.Value;
+                    }
+                t.SetPixel(x, y, pixel);
             }
         t.Apply();
         return t;
@@ -333,6 +371,7 @@ public sealed partial class MooQuest
             if (Button(new Rect(w / 2 + 10, y, bw, 52), "New game")) NewGame("");
         }
         else if (Button(new Rect(w / 2 - bw / 2, y, bw, 52), "Start the adventure!")) ShowSelect();
+        Box(new Rect(0, h - 86, w, 70), new Color(.22f, .15f, .12f, .35f));
         if (Mathf.Repeat(time, 1.2f) < .8f)
             Shadowed(new Rect(0, h - 80, w, 30), "Press SPACE to start", centerStyle, Color.white);
         Shadowed(new Rect(0, h - 48, w, 30), "Tickle critters, rescue cows, and outsmart a very grumpy goat.", smallStyleCentered(), new Color(1, 1, 1, .9f));
@@ -395,12 +434,7 @@ public sealed partial class MooQuest
         GUI.DrawTexture(new Rect(rx + 10, 16, 24, 24), coin);
         Shadowed(new Rect(rx + 40, 16, 150, 24), save.moonies + " Moo-nies", smallStyle, Color.white);
         for (int i = 0; i < 3; i++)
-        {
-            Color old = GUI.color;
-            GUI.color = (save.pieces & (1 << i)) != 0 ? Color.white : new Color(1, 1, 1, .25f);
-            GUI.DrawTexture(new Rect(rx + 10 + i * 28, 44, 24, 24), bell);
-            GUI.color = old;
-        }
+            GUI.DrawTexture(new Rect(rx + 10 + i * 28, 44, 24, 24), (save.pieces & (1 << i)) != 0 ? bell : emptyBell);
         if (hasKey) GUI.DrawTexture(new Rect(rx + 150, 44, 24, 24), acornIcon);
 
         float sw = 220, sx = 14, sy = h - 46;
@@ -413,16 +447,21 @@ public sealed partial class MooQuest
         {
             float a = Mathf.Clamp01(bannerTime) * Mathf.Clamp01((3.2f - bannerTime) * 3);
             MooArea area = MooData.Areas[areaIndex];
+            float bw = Mathf.Min(560, w - 20);
+            Box(new Rect((w - bw) / 2, 86, bw, 76), new Color(.22f, .15f, .12f, .55f * a));
             Shadowed(new Rect(0, 90, w, 44), area.Name, bigStyle, new Color(1, 1, 1, a));
             Shadowed(new Rect(0, 130, w, 30), area.Subtitle, centerStyle, new Color(1, .9f, .5f, a));
         }
         if (boss != null && boss.active)
         {
-            float bw = Mathf.Min(420, w - 440), bx = (w - bw) / 2;
-            Panel(new Rect(bx, 12, bw, 44), new Color(.22f, .15f, .12f, .8f));
-            Shadowed(new Rect(bx, 12, bw, 22), "Grumbleweed's grumpiness", new GUIStyle(smallStyle) { alignment = TextAnchor.MiddleCenter }, Color.white);
-            Box(new Rect(bx + 10, 36, bw - 20, 12), new Color(1, 1, 1, .2f));
-            Box(new Rect(bx + 10, 36, (bw - 20) * boss.hp / BossHp, 12), MooData.Hex("b07ad8"));
+            // Sits between the side panels on wide screens and drops below them on narrow ones.
+            bool fits = w - 440 >= 200;
+            float bw = fits ? Mathf.Min(420, w - 440) : Mathf.Min(420, w - 20), bx = (w - bw) / 2, by = fits ? 12 : 82;
+            Panel(new Rect(bx, by, bw, 44), new Color(.22f, .15f, .12f, .8f));
+            Shadowed(new Rect(bx, by, bw, 22), "Grumbleweed's grumpiness", smallStyleCentered(), Color.white);
+            Box(new Rect(bx + 10, by + 24, bw - 20, 12), new Color(1, 1, 1, .2f));
+            Box(new Rect(bx + 10, by + 24, (bw - 20) * Mathf.Clamp01(boss.hp / (float)BossHp), 12),
+                boss.mode == "dizzy" && Mathf.Repeat(time * 6, 1) < .5f ? MooData.Hex("ffe066") : MooData.Hex("b07ad8"));
         }
     }
 
@@ -443,6 +482,20 @@ public sealed partial class MooQuest
             var c = f.color;
             c.a = Mathf.Clamp01((f.life - f.time) * 2);
             Shadowed(new Rect(p.x - 250, p.y - 15, 500, 30), f.text, floatStyle, c);
+        }
+        if (state.status == "playing" && !gigglingOut && !SomethingToTickle() && TalkTarget(out Npc npc, out Vector2Int? sign))
+        {
+            Vector2 at = sign.HasValue ? Center(sign.Value) : Center(npc.tile);
+            Vector2 p = ToGui(World(at, sign.HasValue ? 2.1f : 2.3f), out bool visible);
+            if (visible)
+            {
+                string text = sign.HasValue ? "Read" : npc.kind == "rescue" ? "Help!" : "Talk";
+                float bob = Mathf.Sin(time * 5) * 3;
+                var r = new Rect(p.x - 34, p.y - 30 + bob, 68, 26);
+                Panel(r, new Color(1f, .97f, .9f, .95f));
+                labelStyle.normal.textColor = MooData.Hex("b05a8a");
+                GUI.Label(r, text, labelStyle);
+            }
         }
         if (boss != null && boss.active && boss.mode == "dizzy")
         {
@@ -484,7 +537,10 @@ public sealed partial class MooQuest
         Box(new Rect(0, 0, w, h), new Color(0, 0, 0, .45f));
         Shadowed(new Rect(0, h / 2 - 90, w, 70), "Paused", titleStyle, Color.white);
         Shadowed(new Rect(0, h / 2 - 20, w, 30), "The cows are waiting patiently. (They're very good at it.)", centerStyle, Color.white);
-        if (Button(new Rect(w / 2 - 110, h / 2 + 30, 220, 48), "Keep playing")) SetPaused("0");
+        Shadowed(new Rect(20, h / 2 + 14, w - 40, 50),
+            "Move: arrows / WASD    Tickle & talk: SPACE    Special: K or SHIFT    Pause: ESC",
+            smallStyleCentered(), new Color(1, .9f, .6f));
+        if (Button(new Rect(w / 2 - 110, h / 2 + 70, 220, 48), "Keep playing")) SetPaused("0");
     }
 
     private void VictoryScreen(float w, float h)

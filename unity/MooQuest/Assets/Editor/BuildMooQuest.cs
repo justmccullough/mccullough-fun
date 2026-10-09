@@ -13,7 +13,7 @@ public static class BuildMooQuest
     public static void Build()
     {
         Validate();
-        IncludeShaders("Legacy Shaders/Diffuse", "Unlit/Color");
+        IncludeShaders("Legacy Shaders/Diffuse", "Unlit/Color", "Legacy Shaders/Transparent/Diffuse");
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         EditorSceneManager.SaveScene(scene, "Assets/Farm.unity");
         PlayerSettings.companyName = "McCullough";
@@ -116,6 +116,11 @@ public static class BuildMooQuest
             if (a == 4) Require(Count(all, 'G') == 1, "Hilltop has Grumbleweed");
         }
         Require(coins >= MooData.HatGoal, "Enough Moo-nies for the crown");
+        foreach (MooMusic.Track track in Enum.GetValues(typeof(MooMusic.Track)))
+        {
+            AudioClip song = MooMusic.Get(track);
+            Require(song != null && song.length >= 25, track + " music is a long loop");
+        }
         string[] hub = MooData.Areas[0].Map;
         foreach (Vector2Int spot in MooData.HubCowSpots)
             Require(hub[hub.Length - 1 - spot.y][spot.x] == '.', "Rescued cows have room in the barnyard");

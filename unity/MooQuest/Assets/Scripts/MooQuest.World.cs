@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
 using Random = UnityEngine.Random;
 using Shape = MooArt.Shape;
 
@@ -47,8 +48,9 @@ public sealed partial class MooQuest
     private sealed class Drop { public Vector2 pos; public int kind; public Transform model; }
     private sealed class Bob { public Transform t; public Vector3 home; public float phase, spin, height; }
     private sealed class Effect { public Transform t; public float time, life, size; }
-    private sealed class Bit { public Transform t; public Vector3 vel; public float life; }
+    private sealed class Bit { public Transform t; public Vector3 vel; public float life; public bool spin = true; }
     private sealed class Slide { public Transform t; public Vector3 target; public bool flatten; }
+    private sealed class Blob { public Transform t, follow; public float size, floor; }
     public sealed class Label { public Vector3 pos; public string text; public Color color; }
     public sealed class FloatText { public Vector3 pos; public string text; public Color color; public float time, life; public bool big; }
 
@@ -74,12 +76,14 @@ public sealed partial class MooQuest
     private readonly List<Effect> effects = new List<Effect>();
     private readonly List<Bit> bits = new List<Bit>();
     private readonly List<Slide> slides = new List<Slide>();
+    private readonly List<Blob> blobs = new List<Blob>();
     private readonly List<Transform> dancers = new List<Transform>();
     private readonly HashSet<Critter> dashHits = new HashSet<Critter>();
     private bool dashHitBoss;
     private MooArt.Rig hero;
     private MooArt.Rig[] stageGirls;
     private Transform spotlight;
+    private float shake, dustTimer;
 
     private static readonly Color[] Confetti =
     {
@@ -190,9 +194,9 @@ public sealed partial class MooQuest
         grid = null;
         critters.Clear(); projectiles.Clear(); npcs.Clear(); labels.Clear(); floats.Clear(); tileModels.Clear();
         baleUnder.Clear(); signs.Clear(); drops.Clear(); bobs.Clear(); effects.Clear(); bits.Clear(); slides.Clear();
-        dancers.Clear(); dashHits.Clear();
+        dancers.Clear(); dashHits.Clear(); blobs.Clear();
         hasKey = gigglingOut = false;
-        dashTime = spin = swing = invuln = specialCooldown = attackCooldown = pushTimer = 0;
+        dashTime = spin = swing = invuln = specialCooldown = attackCooldown = pushTimer = shake = dustTimer = 0;
         knock = playerVel = Vector2.zero;
     }
 
@@ -224,6 +228,7 @@ public sealed partial class MooQuest
             stageGirls[i] = MooArt.Girl(MooData.Characters[i], world);
             stageGirls[i].Root.localPosition = new Vector3(-3.6f + i * 2.4f, .4f, 0);
             stageGirls[i].Root.localEulerAngles = new Vector3(0, 180, 0);
+            AddShadow(stageGirls[i].Root, .9f, .44f);
         }
         for (int i = -1; i <= 1; i += 2)
         {
@@ -231,13 +236,25 @@ public sealed partial class MooQuest
             cow.localPosition = new Vector3(i * 7.2f, 0, 1.5f);
             cow.localEulerAngles = new Vector3(0, 180 + i * 35, 0);
             bobs.Add(new Bob { t = cow, home = cow.localPosition, phase = i, height = .05f });
+            AddShadow(cow, 1.7f);
         }
         spotlight = MooArt.Part(world, Shape.Cylinder, new Vector3(0, .42f, 0), new Vector3(1.6f, .03f, 1.6f), MooData.Hex("fff1a8"), default, true);
         cam.transform.position = new Vector3(0, 2.6f, -8.5f);
         cam.transform.LookAt(new Vector3(0, 1.1f, 0));
-        cam.backgroundColor = home.Sky;
-        sun.color = home.Sun;
-        RenderSettings.ambientLight = new Color(home.Ambient, home.Ambient, home.Ambient);
+        ApplyLighting(home);
+    }
+
+    // Three-tone ambient (bright sky above, neutral middle, ground-tinted below) gives the flat-shaded models more depth.
+    private void ApplyLighting(MooArea area)
+    {
+        cam.backgroundColor = area.Sky;
+        sun.color = area.Sun;
+        float a = area.Ambient;
+        var mid = new Color(a, a, a * 1.05f);
+        RenderSettings.ambientMode = AmbientMode.Trilight;
+        RenderSettings.ambientSkyColor = Color.Lerp(mid, area.Sky, .4f) * 1.15f;
+        RenderSettings.ambientEquatorColor = mid;
+        RenderSettings.ambientGroundColor = Color.Lerp(mid, area.Ground, .5f) * .7f;
     }
 
     public void EnterArea(int index, int fromGate)
@@ -258,6 +275,7 @@ public sealed partial class MooQuest
         Vector2Int start = new Vector2Int(1, 1), barnMin = new Vector2Int(999, 999), barnMax = new Vector2Int(-1, -1);
         int signIndex = 0;
         Vector2Int goatTile = new Vector2Int(-1, -1);
+        Color checker = Color.Lerp(area.Ground, area.Grass, .35f), tuft = Color.Lerp(area.Ground, area.Grass, .6f);
         for (int r = 0; r < height; r++)
             for (int x = 0; x < width; x++)
             {
@@ -266,6 +284,9 @@ public sealed partial class MooQuest
                 char ch = map[r][x];
                 Vector3 pos = new Vector3(x * Tile, 0, y * Tile);
                 grid[x, y] = ch;
+                // Soft checkerboard of lighter grass so the ground reads as tiles instead of one flat sheet.
+                if ((x + y) % 2 == 0 && "#w~R".IndexOf(ch) < 0)
+                    batch.Add(Shape.Cube, pos + new Vector3(0, .005f, 0), new Vector3(Tile, .02f, Tile), checker);
                 switch (ch)
                 {
                     case '#': Wall(batch, area, pos, t); break;
@@ -356,6 +377,10 @@ public sealed partial class MooQuest
                         break;
                     default:
                         if (Random.value < .22f) Flowers(batch, pos, 1.6f, 2);
+                        if (Random.value < .35f)
+                            for (int k = 0; k < 3; k++)
+                                batch.Add(Shape.Cone, pos + new Vector3(Random.Range(-.8f, .8f), .14f, Random.Range(-.8f, .8f)),
+                                    new Vector3(.1f, .28f, .1f), tuft, new Vector3(Random.Range(-15f, 15f), 0, Random.Range(-15f, 15f)));
                         break;
                 }
             }
@@ -381,6 +406,7 @@ public sealed partial class MooQuest
 
         hero = MooArt.Girl(Hero, world);
         hero.Crown.gameObject.SetActive(save.crown);
+        AddShadow(hero.Root, .85f);
         playerPos = Center(start);
         facing = Vector2.down;
         if (index == 0 && fromGate > 0)
@@ -406,17 +432,18 @@ public sealed partial class MooQuest
             {
                 boss = new Boss { pos = Center(goatTile), model = MooArt.Goat(world) };
                 boss.model.localPosition = World(boss.pos);
+                AddShadow(boss.model, 2.4f);
             }
         }
 
-        cam.backgroundColor = area.Sky;
-        sun.color = area.Sun;
-        RenderSettings.ambientLight = new Color(area.Ambient, area.Ambient, area.Ambient * 1.05f);
+        ApplyLighting(area);
         SnapCamera();
         bannerTime = 3.2f;
         state.message = area.Name + ": " + area.Subtitle;
         state.status = "playing";
-        PlayMusic(index == 3 ? woodsSong : index == 4 && !save.finished ? bossSong : farmSong);
+        MooMusic.Track[] songs = { MooMusic.Track.Barnyard, MooMusic.Track.Meadow, MooMusic.Track.Marsh, MooMusic.Track.Woods,
+            save.finished ? MooMusic.Track.Sunset : MooMusic.Track.Boss };
+        PlayMusic(songs[index]);
         if (boss != null) Say(MooData.BossIntro, () => { boss.active = true; boss.timer = 1.2f; });
     }
 
@@ -428,7 +455,16 @@ public sealed partial class MooQuest
         model.localPosition = World(Center(t));
         model.localEulerAngles = new Vector3(0, 180 + Random.Range(-40f, 40f), 0);
         npcs[t] = new Npc { kind = kind, name = name, tile = t, model = model };
+        AddShadow(model, kind == "goat" ? 2.4f : 1.7f);
     }
+
+    private void AddShadow(Transform follow, float size, float floor = .07f)
+    {
+        if (world == null || follow == null) return;
+        blobs.Add(new Blob { t = MooArt.BlobShadow(world), follow = follow, size = size, floor = floor });
+    }
+
+    public void Shake(float amount) => shake = Mathf.Max(shake, amount);
 
     private void Wall(MooArt.Batch batch, MooArea area, Vector3 pos, Vector2Int t)
     {
@@ -556,6 +592,7 @@ public sealed partial class MooQuest
         MooArt.Part(acorn, Shape.Ball, new Vector3(0, .22f, 0), new Vector3(.52f, .25f, .52f), MooData.Hex("a8742f"));
         MooArt.Part(acorn, Shape.Cylinder, new Vector3(0, .38f, 0), new Vector3(.06f, .14f, .06f), MooData.Hex("7a5030"));
         bobs.Add(new Bob { t = acorn, home = acorn.localPosition, spin = 90, height = .15f });
+        AddShadow(acorn, .5f);
         return acorn;
     }
 
@@ -568,6 +605,7 @@ public sealed partial class MooQuest
         MooArt.Part(milk, Shape.Cylinder, new Vector3(0, .5f, 0), new Vector3(.24f, .1f, .24f), MooData.Hex("5aa9e6"));
         MooArt.Part(milk, Shape.Cube, new Vector3(0, 0, -.18f), new Vector3(.2f, .18f, .02f), MooData.Hex("ff8fc8"));
         bobs.Add(new Bob { t = milk, home = milk.localPosition, spin = 60, height = .12f, phase = pos.x });
+        AddShadow(milk, .45f);
         return milk;
     }
 
@@ -579,6 +617,7 @@ public sealed partial class MooQuest
         MooArt.Part(coin, Shape.Ball, new Vector3(0, 0, 0), new Vector3(.3f, .3f, .12f), Color.white);
         MooArt.Part(coin, Shape.Ball, new Vector3(.05f, .04f, 0), new Vector3(.1f, .1f, .14f), MooArt.Black);
         bobs.Add(new Bob { t = coin, home = coin.localPosition, spin = 150, height = .12f, phase = pos.z });
+        AddShadow(coin, .5f);
         return coin;
     }
 
@@ -591,6 +630,7 @@ public sealed partial class MooQuest
             wanderTimer = Random.Range(0, 2f), model = MooArt.Critter(kind, world),
         };
         c.model.localPosition = World(pos);
+        AddShadow(c.model, kind == 1 ? .95f : .85f);
         critters.Add(c);
     }
 
@@ -628,10 +668,16 @@ public sealed partial class MooQuest
             knock = Vector2.MoveTowards(knock, Vector2.zero, 40 * dt);
             Probe(input, dt);
         }
+        dustTimer -= dt;
+        if ((walking || dashTime > 0) && !gigglingOut && dustTimer <= 0)
+        {
+            dustTimer = dashTime > 0 ? .04f : .2f;
+            Puff(playerPos - facing * .3f);
+        }
 
         if (!gigglingOut)
         {
-            if (actionPressed && !TryTalk()) Tickle();
+            if (actionPressed && (SomethingToTickle() || !TryTalk())) Tickle();
             if (state.status != "playing") return;
             if (specialPressed) Special();
             Pickups();
@@ -736,17 +782,19 @@ public sealed partial class MooQuest
         tileModels.Remove(t);
         hasKey = false;
         Burst(Center(t), 20);
+        Shake(.3f);
         Float("Click-clack! The log gate swings open!", Center(t), MooData.Hex("ffe066"), true);
         state.message = "The log gate opened!";
         Play(sparkleClip);
     }
 
-    private bool TryTalk()
+    // The nearest cow, goat, or sign in front of the hero, if any.
+    public bool TalkTarget(out Npc npc, out Vector2Int? sign)
     {
         Vector2 probe = playerPos + facing * 1.1f;
         float best = 1.8f;
-        Npc npc = null;
-        Vector2Int? sign = null;
+        npc = null;
+        sign = null;
         foreach (Npc n in npcs.Values)
         {
             float d = (Center(n.tile) - probe).magnitude;
@@ -757,6 +805,21 @@ public sealed partial class MooQuest
             float d = (Center(s) - probe).magnitude;
             if (d < best) { best = d; sign = s; npc = null; }
         }
+        return npc != null || sign.HasValue;
+    }
+
+    // Tickling wins over chatting when a critter (or the goat) is right in front of the hero.
+    public bool SomethingToTickle()
+    {
+        Vector2 center = playerPos + facing * 1.0f;
+        foreach (Critter c in critters)
+            if (!c.giggling && (c.pos - center).magnitude < 1.35f) return true;
+        return boss != null && boss.active && (boss.pos - center).magnitude < 2.1f;
+    }
+
+    private bool TryTalk()
+    {
+        TalkTarget(out Npc npc, out Vector2Int? sign);
         if (sign.HasValue)
         {
             Say(new[] { "Sign|" + signs[sign.Value] }, null);
@@ -839,6 +902,7 @@ public sealed partial class MooQuest
         {
             case 0:
                 spin = .5f;
+                Shake(.25f);
                 Ring(playerPos, 3.2f, MooData.Hex("ffe066"));
                 Play(sparkleClip);
                 foreach (Critter c in critters.ToArray())
@@ -885,6 +949,7 @@ public sealed partial class MooQuest
         }
         c.giggling = true;
         c.happy = 1.1f;
+        Shake(.15f);
         Float(Pick(MooData.CritterGiggles), c.pos, MooData.Hex("ffe066"));
         Play(highGiggle, .8f);
         float roll = Random.value;
@@ -906,6 +971,7 @@ public sealed partial class MooQuest
         Vector2 away = playerPos - from;
         knock = (away.sqrMagnitude < .001f ? -facing : away.normalized) * 10;
         Float(Pick(MooData.GotTickled), playerPos, MooData.Hex("ff9ccf"));
+        Shake(.45f);
         Play(giggleClip);
         state.message = "Tickled! " + giggles + " giggles left.";
     }
@@ -957,10 +1023,20 @@ public sealed partial class MooQuest
     private void GetCoin()
     {
         save.moonies++;
-        Save();
         Float("+1 Moo-nie!", playerPos, MooArt.Gold);
         state.message = "Moo-nies: " + save.moonies;
         Play(dingClip);
+        // Heroes who finish first can still earn the crown by collecting the rest afterwards.
+        if (save.finished && !save.crown && save.moonies >= MooData.HatGoal)
+        {
+            save.crown = true;
+            if (hero != null) hero.Crown.gameObject.SetActive(true);
+            Float("You earned the sparkly Moo-nie Crown!", playerPos + Vector2.up, MooArt.Gold, true);
+            state.message = "You earned the sparkly Moo-nie Crown!";
+            Burst(playerPos, 20);
+            Play(sparkleClip);
+        }
+        Save();
     }
 
     private void UpdateDrops()
@@ -1120,6 +1196,7 @@ public sealed partial class MooQuest
                     DizzyBoss(2.4f);
                     Float("BONK! Dizzy!", boss.pos, MooData.Hex("ffe066"), true);
                     Burst(boss.pos, 16);
+                    Shake(.8f);
                     Play(bonkClip);
                 }
                 else if (boss.timer <= 0)
@@ -1186,6 +1263,7 @@ public sealed partial class MooQuest
         int before = BossPhase;
         boss.hp -= amount;
         boss.hurt = .3f;
+        Shake(.25f);
         Play(lowGiggle);
         if (boss.hp <= 0)
         {
@@ -1207,6 +1285,7 @@ public sealed partial class MooQuest
         projectiles.Clear();
         foreach (Critter c in critters) { c.giggling = true; c.happy = 1; }
         Burst(boss.pos, 30);
+        Shake(1f);
         Say(MooData.BossEnding, Victory);
     }
 
@@ -1219,7 +1298,7 @@ public sealed partial class MooQuest
         state.status = "victory";
         state.message = "You did it! The Golden Cowbell is whole and the herd can moo again!";
         partyTime = 0;
-        PlayMusic(partySong);
+        PlayMusic(MooMusic.Track.Party);
         Play(bigMoo);
         if (hero != null) hero.Crown.gameObject.SetActive(save.crown);
         if (boss != null && boss.model != null) dancers.Add(boss.model);
@@ -1230,6 +1309,7 @@ public sealed partial class MooQuest
             Transform cow = MooArt.Cow(names[i], world, Confetti[i], true, i == 0);
             cow.localPosition = World(playerPos + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * 3.5f);
             dancers.Add(cow);
+            AddShadow(cow, 1.7f);
         }
     }
 
@@ -1255,6 +1335,14 @@ public sealed partial class MooQuest
     {
         Transform ring = MooArt.Part(world, Shape.Cylinder, World(at, .1f), new Vector3(0, .04f, 0), color, default, true);
         effects.Add(new Effect { t = ring, life = .45f, size = radius * 2 });
+    }
+
+    private void Puff(Vector2 at)
+    {
+        if (world == null || areaIndex < 0) return;
+        Color dust = At(TileAt(at)) == '~' ? MooData.Hex("a07a52") : Color.Lerp(MooData.Areas[areaIndex].Ground, Color.white, .55f);
+        Transform bit = MooArt.Part(world, Shape.Ball, World(at + Random.insideUnitCircle * .2f, .15f), Vector3.one * Random.Range(.16f, .26f), dust);
+        bits.Add(new Bit { t = bit, vel = new Vector3(Random.Range(-.4f, .4f), Random.Range(1.2f, 2f), Random.Range(-.4f, .4f)), life = .3f, spin = false });
     }
 
     private void Burst(Vector2 at, int count)

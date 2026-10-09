@@ -51,7 +51,7 @@ public sealed partial class MooQuest : MonoBehaviour
 
     private AudioSource sfx, music;
     private AudioClip mooClip, bigMoo, giggleClip, highGiggle, lowGiggle, swishClip, dingClip, bonkClip, quackClip,
-        sparkleClip, lullabyClip, bleatClip, farmSong, woodsSong, bossSong, partySong;
+        sparkleClip, lullabyClip, bleatClip;
 
     public MooCharacter Hero => MooData.Characters[Mathf.Clamp(save.character, 0, MooData.Characters.Length - 1)];
     public bool HasSave => save.character >= 0 && save.character < MooData.Characters.Length;
@@ -79,7 +79,7 @@ public sealed partial class MooQuest : MonoBehaviour
         sun.transform.rotation = Quaternion.Euler(50, -30, 0);
         sun.intensity = 1.05f;
         sun.shadows = LightShadows.None;
-        RenderSettings.ambientMode = AmbientMode.Flat;
+        RenderSettings.ambientMode = AmbientMode.Trilight;
 
         sfx = gameObject.AddComponent<AudioSource>();
         music = gameObject.AddComponent<AudioSource>();
@@ -97,10 +97,7 @@ public sealed partial class MooQuest : MonoBehaviour
         quackClip = MooAudio.Quack();
         sparkleClip = MooAudio.Sparkle();
         lullabyClip = MooAudio.Lullaby();
-        farmSong = MooAudio.FarmSong();
-        woodsSong = MooAudio.WoodsSong();
-        bossSong = MooAudio.BossSong();
-        partySong = MooAudio.PartySong();
+        MooMusic.Get(MooMusic.Track.Barnyard); // Other songs are composed the first time they're needed.
 
         LoadSave();
         ShowTitle();
@@ -172,7 +169,7 @@ public sealed partial class MooQuest : MonoBehaviour
         selected = HasSave ? save.character : 0;
         state.status = "title";
         state.message = "Welcome to Moo Quest! The Great Cowbell Caper awaits.";
-        PlayMusic(farmSong);
+        PlayMusic(MooMusic.Track.Barnyard);
         Publish();
     }
 
@@ -181,7 +178,7 @@ public sealed partial class MooQuest : MonoBehaviour
         if (stageGirls == null) BuildStage();
         state.status = "select";
         state.message = "Choose your hero: Kaite, Laura, Grace, or Audrey.";
-        PlayMusic(farmSong);
+        PlayMusic(MooMusic.Track.Barnyard);
         Publish();
     }
 
@@ -404,9 +401,11 @@ public sealed partial class MooQuest : MonoBehaviour
         if (!muted && sfx != null && clip != null && Application.isPlaying) sfx.PlayOneShot(clip, volume);
     }
 
-    private void PlayMusic(AudioClip clip)
+    private void PlayMusic(MooMusic.Track track)
     {
-        if (music == null || !Application.isPlaying || music.clip == clip) return;
+        if (music == null || !Application.isPlaying) return;
+        AudioClip clip = MooMusic.Get(track);
+        if (music.clip == clip) return;
         music.clip = clip;
         music.Play();
     }

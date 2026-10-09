@@ -58,41 +58,4 @@ public static class MooAudio
         int n = Mathf.Min(notes.Length - 1, (int)(t / .2f));
         return Sin(notes[n], t) * .13f * Env(t % .2f, .2f);
     });
-
-    // A gentle little loop: triangle-wave melody over a soft bass.
-    public static AudioClip Song(string name, int[] melody, int[] bass, float beat, float volume)
-    {
-        float length = melody.Length * beat;
-        return Make(name, length, t =>
-        {
-            int index = (int)(t / beat) % melody.Length;
-            float local = t % beat;
-            float sample = 0;
-            if (melody[index] > 0)
-            {
-                float hz = 440 * Mathf.Pow(2, (melody[index] - 69) / 12f);
-                float phase = t * hz % 1;
-                sample += (Mathf.Abs(phase * 4 - 2) - 1) * Mathf.Min(1, local * 40) * Mathf.Exp(-local * 3) * .5f;
-            }
-            int b = bass[(int)(t / (beat * 2)) % bass.Length];
-            if (b > 0) sample += Sin(440 * Mathf.Pow(2, (b - 69) / 12f), t) * .35f * Mathf.Exp(-(t % (beat * 2)) * 2);
-            return sample * volume;
-        });
-    }
-
-    public static AudioClip FarmSong() => Song("Farm song",
-        new[] { 72, 74, 76, 72, 76, 77, 79, 0, 79, 81, 79, 77, 76, 72, 74, 0, 72, 74, 76, 79, 77, 76, 74, 72, 74, 76, 74, 71, 72, 0, 0, 0 },
-        new[] { 48, 53, 55, 48, 48, 53, 55, 48 }, .24f, .22f);
-
-    public static AudioClip WoodsSong() => Song("Woods song",
-        new[] { 69, 0, 72, 76, 74, 0, 72, 69, 71, 0, 74, 77, 76, 0, 74, 71, 69, 72, 76, 81, 79, 76, 74, 72, 71, 72, 74, 71, 69, 0, 0, 0 },
-        new[] { 45, 41, 43, 40, 45, 41, 43, 45 }, .3f, .2f);
-
-    public static AudioClip BossSong() => Song("Goat polka",
-        new[] { 67, 0, 72, 72, 74, 0, 76, 76, 77, 76, 74, 72, 71, 0, 67, 0, 67, 0, 71, 71, 72, 0, 74, 74, 76, 74, 72, 71, 72, 0, 72, 0 },
-        new[] { 48, 43, 48, 43, 43, 50, 48, 48 }, .17f, .22f);
-
-    public static AudioClip PartySong() => Song("Dance party",
-        new[] { 72, 76, 79, 84, 79, 76, 72, 76, 74, 77, 81, 86, 81, 77, 74, 77, 76, 79, 84, 88, 84, 79, 76, 79, 77, 76, 74, 72, 84, 0, 84, 0 },
-        new[] { 48, 50, 52, 53, 48, 50, 55, 48 }, .16f, .22f);
 }
