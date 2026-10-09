@@ -1,332 +1,139 @@
 import { useEffect, useRef, useState } from 'react'
 import './PongGame.css'
 
-const WIDTH = 720
-const HEIGHT = 440
-const PADDLE_W = 13
-const PADDLE_H = 88
-const PADDLE_MARGIN = 26
-const BALL_R = 9
-const WIN_SCORE = 10
-const STEP_MS = 1000 / 60
-const PLAYER_KEY_SPEED = 7
-const CPU_MAX_SPEED = 5.2
-const BALL_START_SPEED = 5
-const BALL_MAX_SPEED = 12.5
-const SERVE_DELAY = 48
-
-const COLOR = {
-  court: '#46311f',
-  line: 'rgba(251, 243, 228, 0.22)',
-  player: '#c9714f',
-  cpu: '#8a9a5b',
-  ball: '#e3aa45',
-  ballGlow: 'rgba(227, 170, 69, 0.55)',
-}
-
-const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v)
-
-function createGame() {
-  return {
-    ball: { x: WIDTH / 2, y: HEIGHT / 2, vx: 0, vy: 0, speed: BALL_START_SPEED },
-    playerY: HEIGHT / 2 - PADDLE_H / 2,
-    cpuY: HEIGHT / 2 - PADDLE_H / 2,
-    score: { player: 0, cpu: 0 },
-    serveTimer: SERVE_DELAY,
-    serveDir: Math.random() < 0.5 ? -1 : 1,
-    keys: { up: false, down: false },
-  }
-}
-
-function serve(game) {
-  const { ball } = game
-  ball.x = WIDTH / 2
-  ball.y = HEIGHT / 2
-  ball.speed = BALL_START_SPEED
-  const angle = (Math.random() - 0.5) * (Math.PI / 3)
-  ball.vx = game.serveDir * ball.speed * Math.cos(angle)
-  ball.vy = ball.speed * Math.sin(angle)
-}
-
-function bounce(game, paddleY, edgeX, dir) {
-  const { ball } = game
-  ball.x = edgeX
-  const rel = clamp((ball.y - (paddleY + PADDLE_H / 2)) / (PADDLE_H / 2), -1, 1)
-  ball.speed = Math.min(ball.speed + 0.45, BALL_MAX_SPEED)
-  const angle = rel * (Math.PI / 3.2)
-  ball.vx = dir * ball.speed * Math.cos(angle)
-  ball.vy = ball.speed * Math.sin(angle)
-}
-
-// Advances the simulation one fixed step. Returns the scorer, or null.
-function step(game) {
-  const { ball } = game
-
-  if (game.serveTimer > 0) {
-    game.serveTimer -= 1
-    if (game.serveTimer === 0) serve(game)
-  }
-
-  if (game.keys.up) game.playerY -= PLAYER_KEY_SPEED
-  if (game.keys.down) game.playerY += PLAYER_KEY_SPEED
-  game.playerY = clamp(game.playerY, 0, HEIGHT - PADDLE_H)
-
-  const cpuCenter = game.cpuY + PADDLE_H / 2
-  const cpuTarget = ball.vx > 0 ? ball.y : HEIGHT / 2
-  const cpuDiff = cpuTarget - cpuCenter
-  if (Math.abs(cpuDiff) > 6) {
-    game.cpuY += clamp(cpuDiff, -CPU_MAX_SPEED, CPU_MAX_SPEED)
-    game.cpuY = clamp(game.cpuY, 0, HEIGHT - PADDLE_H)
-  }
-
-  ball.x += ball.vx
-  ball.y += ball.vy
-
-  if (ball.y - BALL_R < 0) {
-    ball.y = BALL_R
-    ball.vy = Math.abs(ball.vy)
-  } else if (ball.y + BALL_R > HEIGHT) {
-    ball.y = HEIGHT - BALL_R
-    ball.vy = -Math.abs(ball.vy)
-  }
-
-  const playerEdge = PADDLE_MARGIN + PADDLE_W
-  if (
-    ball.vx < 0 &&
-    ball.x - BALL_R <= playerEdge &&
-    ball.x + BALL_R >= PADDLE_MARGIN &&
-    ball.y + BALL_R >= game.playerY &&
-    ball.y - BALL_R <= game.playerY + PADDLE_H
-  ) {
-    bounce(game, game.playerY, playerEdge + BALL_R, 1)
-  }
-
-  const cpuEdge = WIDTH - PADDLE_MARGIN - PADDLE_W
-  if (
-    ball.vx > 0 &&
-    ball.x + BALL_R >= cpuEdge &&
-    ball.x - BALL_R <= WIDTH - PADDLE_MARGIN &&
-    ball.y + BALL_R >= game.cpuY &&
-    ball.y - BALL_R <= game.cpuY + PADDLE_H
-  ) {
-    bounce(game, game.cpuY, cpuEdge - BALL_R, -1)
-  }
-
-  if (ball.x + BALL_R < 0) return 'cpu'
-  if (ball.x - BALL_R > WIDTH) return 'player'
-  return null
-}
-
-function draw(ctx, game) {
-  ctx.fillStyle = COLOR.court
-  ctx.fillRect(0, 0, WIDTH, HEIGHT)
-
-  ctx.strokeStyle = COLOR.line
-  ctx.lineWidth = 4
-  ctx.setLineDash([14, 18])
-  ctx.beginPath()
-  ctx.moveTo(WIDTH / 2, 10)
-  ctx.lineTo(WIDTH / 2, HEIGHT - 10)
-  ctx.stroke()
-  ctx.setLineDash([])
-
-  ctx.fillStyle = COLOR.player
-  ctx.beginPath()
-  ctx.roundRect(PADDLE_MARGIN, game.playerY, PADDLE_W, PADDLE_H, 6)
-  ctx.fill()
-
-  ctx.fillStyle = COLOR.cpu
-  ctx.beginPath()
-  ctx.roundRect(WIDTH - PADDLE_MARGIN - PADDLE_W, game.cpuY, PADDLE_W, PADDLE_H, 6)
-  ctx.fill()
-
-  ctx.save()
-  ctx.shadowColor = COLOR.ballGlow
-  ctx.shadowBlur = 18
-  ctx.fillStyle = COLOR.ball
-  ctx.beginPath()
-  ctx.arc(game.ball.x, game.ball.y, BALL_R, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.restore()
-}
-
+const LEVELS = [
+  { name: 'Easy', note: 'Just grazing. A slow, daydreamy opponent.' },
+  { name: 'Medium', note: 'A little competitive. Still very moo-ch your friend.' },
+  { name: 'Hard', note: 'Fast hooves. Sharp reflexes. Absolutely no chill.' },
+]
+const INITIAL = { status: 'idle', player: 0, cpu: 0, difficulty: 1, rally: 0, message: 'A friendly little pasture rivalry.' }
 export default function PongGame() {
-  const canvasRef = useRef(null)
-  const gameRef = useRef(null)
-  if (gameRef.current === null) gameRef.current = createGame()
+  const frameRef = useRef(null)
+  const [game, setGame] = useState(INITIAL)
+  const [progress, setProgress] = useState(0)
+  const [ready, setReady] = useState(false)
+  const [error, setError] = useState('')
+  const [attempt, setAttempt] = useState(0)
+  const [muted, setMuted] = useState(false)
 
-  const [status, setStatus] = useState('idle')
-  const [score, setScore] = useState({ player: 0, cpu: 0 })
-  const [winner, setWinner] = useState(null)
+  function send(method, value = '') {
+    frameRef.current?.contentWindow?.postMessage({ type: 'pong-command', method, value: String(value) }, window.location.origin)
+  }
 
-  // Draw a static frame whenever the game is not actively running.
   useEffect(() => {
-    if (status === 'playing') return
-    draw(canvasRef.current.getContext('2d'), gameRef.current)
-  }, [status])
-
-  // Game loop.
-  useEffect(() => {
-    if (status !== 'playing') return
-    const canvas = canvasRef.current
-    const ctx = canvas.getContext('2d')
-    const game = gameRef.current
-    let raf = 0
-    let last = performance.now()
-    let acc = 0
-
-    function frame(now) {
-      acc += Math.min(now - last, 100)
-      last = now
-
-      let scored = null
-      while (acc >= STEP_MS) {
-        scored = step(game)
-        acc -= STEP_MS
-        if (scored) break
-      }
-
-      if (scored) {
-        game.score[scored] += 1
-        const next = { ...game.score }
-        setScore(next)
-        if (next[scored] >= WIN_SCORE) {
-          setWinner(scored)
-          setStatus('gameover')
-          draw(ctx, game)
-          return
-        }
-        game.serveDir = scored === 'player' ? 1 : -1
-        game.ball.x = WIDTH / 2
-        game.ball.y = HEIGHT / 2
-        game.ball.vx = 0
-        game.ball.vy = 0
-        game.serveTimer = SERVE_DELAY
-      }
-
-      draw(ctx, game)
-      raf = requestAnimationFrame(frame)
-    }
-
-    function pointerY(clientY) {
-      const rect = canvas.getBoundingClientRect()
-      return (clientY - rect.top) * (HEIGHT / rect.height)
-    }
-    function onMouseMove(e) {
-      game.playerY = clamp(pointerY(e.clientY) - PADDLE_H / 2, 0, HEIGHT - PADDLE_H)
-    }
-    function onTouchMove(e) {
-      const touch = e.touches[0]
-      if (!touch) return
-      game.playerY = clamp(
-        pointerY(touch.clientY) - PADDLE_H / 2,
-        0,
-        HEIGHT - PADDLE_H,
-      )
-      e.preventDefault()
-    }
-    function onKeyDown(e) {
-      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
-        game.keys.up = true
-        e.preventDefault()
-      } else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
-        game.keys.down = true
-        e.preventDefault()
+    setReady(false)
+    setMuted(false)
+    setError('')
+    setProgress(0)
+    setGame(INITIAL)
+    const timeout = window.setTimeout(() => {
+      setError('The pasture is taking too long to open. Check your connection and try again.')
+    }, 90000)
+    const message = (event) => {
+      if (event.origin !== window.location.origin || event.source !== frameRef.current?.contentWindow) return
+      switch (event.data.type) {
+        case 'pong-state': setGame(event.data.detail); break
+        case 'pong-progress': setProgress(event.data.detail); break
+        case 'pong-ready': window.clearTimeout(timeout); setReady(true); break
+        case 'pong-error': window.clearTimeout(timeout); setError(event.data.detail); break
       }
     }
-    function onKeyUp(e) {
-      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') game.keys.up = false
-      if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') game.keys.down = false
+    const pause = () => {
+      // Focusing the Unity iframe also blurs its parent; that is not a tab change.
+      if (document.activeElement !== frameRef.current) send('SetPaused', '1')
     }
-
-    canvas.addEventListener('mousemove', onMouseMove)
-    canvas.addEventListener('touchmove', onTouchMove, { passive: false })
-    window.addEventListener('keydown', onKeyDown)
-    window.addEventListener('keyup', onKeyUp)
-    raf = requestAnimationFrame(frame)
-
+    const visibility = () => { if (document.hidden) send('SetPaused', '1') }
+    window.addEventListener('message', message)
+    window.addEventListener('blur', pause)
+    document.addEventListener('visibilitychange', visibility)
     return () => {
-      cancelAnimationFrame(raf)
-      canvas.removeEventListener('mousemove', onMouseMove)
-      canvas.removeEventListener('touchmove', onTouchMove)
-      window.removeEventListener('keydown', onKeyDown)
-      window.removeEventListener('keyup', onKeyUp)
+      window.clearTimeout(timeout)
+      window.removeEventListener('message', message)
+      window.removeEventListener('blur', pause)
+      document.removeEventListener('visibilitychange', visibility)
     }
-  }, [status])
+  }, [attempt])
 
-  function startGame() {
-    gameRef.current = createGame()
-    setScore({ player: 0, cpu: 0 })
-    setWinner(null)
-    setStatus('playing')
+  function start() {
+    send('Restart')
+  }
+
+  function chooseLevel(index) {
+    send('SetDifficulty', index)
   }
 
   return (
     <div className="page pong">
       <header className="pong-head">
-        <p className="pong-kicker">🏓 Family game night 🏓</p>
-        <h1 className="pong-title">Family Pong</h1>
-        <p className="pong-intro">
-          You’re the warm terracotta paddle on the left. First to {WIN_SCORE}{' '}
-          points wins — then the match resets for a rematch.
-        </p>
+        <p className="pong-kicker">🐄 A little friendly farm-petition</p>
+        <h1 className="pong-title">Pasture Pong<span aria-hidden="true">.</span></h1>
+        <p className="pong-intro">One pasture. Two cows. Unreasonably high steaks.<br />
+          Take on Sir Moos-a-Lot in a cozy, single-player game of Pong.</p>
       </header>
 
-      <div className="pong-scoreboard">
-        <div className="pong-score pong-score-player">
-          <span className="pong-score-name">You</span>
-          <span className="pong-score-value">{score.player}</span>
-        </div>
-        <span className="pong-score-sep">vs</span>
-        <div className="pong-score pong-score-cpu">
-          <span className="pong-score-name">CPU</span>
-          <span className="pong-score-value">{score.cpu}</span>
-        </div>
-      </div>
-
-      <div className="pong-stage">
-        <canvas
-          ref={canvasRef}
-          width={WIDTH}
-          height={HEIGHT}
-          className="pong-canvas"
-        />
-        {status !== 'playing' && (
-          <div className="pong-overlay">
-            {status === 'idle' ? (
-              <>
-                <p className="pong-overlay-emoji" aria-hidden="true">🏓</p>
-                <h2 className="pong-overlay-title">Ready to play?</h2>
-                <p className="pong-overlay-text">
-                  Move your paddle with the mouse, or the ↑ / ↓ (or W / S) keys.
-                </p>
-                <button type="button" className="btn" onClick={startGame}>
-                  Start game
-                </button>
-              </>
-            ) : (
-              <>
-                <p className="pong-overlay-emoji" aria-hidden="true">
-                  {winner === 'player' ? '🎉' : '🤖'}
-                </p>
-                <h2 className="pong-overlay-title">
-                  {winner === 'player' ? 'You win!' : 'The CPU wins!'}
-                </h2>
-                <p className="pong-overlay-text">
-                  Final score — You {score.player}, CPU {score.cpu}.
-                </p>
-                <button type="button" className="btn" onClick={startGame}>
-                  Play again
-                </button>
-              </>
-            )}
+      <section className="pong-card" aria-label="Pasture Pong game">
+        <div className="pong-toolbar">
+          <div className="pong-levels" role="group" aria-label="CPU difficulty">
+            {LEVELS.map((level, index) => (
+              <button key={level.name} type="button" aria-pressed={game.difficulty === index}
+                disabled={!ready || !!error} onClick={() => chooseLevel(index)}>{level.name}</button>
+            ))}
           </div>
-        )}
-      </div>
+          <span className="pong-rules">First to 7 · no actual beef</span>
+        </div>
+        <p className="pong-level-note">{LEVELS[game.difficulty].note} Changing difficulty starts a fresh match.</p>
 
-      <p className="pong-hint">
-        Tip: clip the ball with the edge of your paddle for a sharper angle.
-      </p>
+        <div className="pong-scoreboard" aria-label={`Score: you ${game.player}, CPU ${game.cpu}`}>
+          <div className="pong-team pong-team-player"><span className="pong-avatar" aria-hidden="true">🐮</span>
+            <div><span className="pong-score-name">You</span><span className="pong-team-note">The hometown heifer</span></div>
+          </div>
+          <div className="pong-score"><span>{game.player}</span><span className="pong-score-sep">:</span><span>{game.cpu}</span></div>
+          <div className="pong-team pong-team-cpu"><div><span className="pong-score-name">Sir Moos-a-Lot</span>
+            <span className="pong-team-note">CPU · professional grazer</span></div><span className="pong-avatar" aria-hidden="true">🐄</span></div>
+        </div>
+
+        <div className="pong-stage">
+          <iframe key={attempt} ref={frameRef} className="pong-canvas"
+            src={`${import.meta.env.BASE_URL}unity/pong-host.html`}
+            title="Unity Pasture Pong field" aria-describedby="pong-controls"
+            onError={() => setError('The Unity player could not load. Please try again.')} />
+          {(error || !ready || game.status !== 'playing') && (
+            <div className="pong-overlay">
+              <span className="pong-overlay-emoji" aria-hidden="true">{error ? '🌧️' : game.status === 'gameover' && game.player >= 7 ? '🏆' : '🐮'}</span>
+              <h2>{error ? 'A little trouble in the pasture' : !ready ? 'Opening the pasture…' :
+                game.status === 'paused' ? 'Taking a grass break' : game.status === 'gameover' ?
+                  game.player >= 7 ? 'Udderly victorious!' : 'Sir Moos-a-Lot wins!' : 'Ready to raise the steaks?'}</h2>
+              <p>{error || (!ready ? 'Loading our little Unity game. The cows are getting their hooves on.' :
+                game.status === 'paused' ? 'Your herd will be right here.' : game.status === 'gameover' ?
+                  game.message : 'You’re the cow with the terracotta scarf. Keep the hay bale in play!')}</p>
+              {error ? <button className="btn" onClick={() => setAttempt((value) => value + 1)}>Try again</button> :
+                !ready ? <><progress value={progress} max={1} aria-label="Loading Unity game" /><span>{Math.round(progress * 100)}%</span></> :
+                  <button className="btn" onClick={game.status === 'paused' ? () => {
+                    send('SetPaused', '0')
+                  } : start}>{game.status === 'paused' ? 'Back to the pasture' : game.status === 'gameover' ? 'One moo-re round' : 'Let’s play'}</button>}
+            </div>
+          )}
+        </div>
+
+        <div className="pong-bottom-bar">
+          <p className="pong-commentary" role="status">{game.message}</p>
+          <div className="pong-actions">
+            <button type="button" disabled={!ready || !!error || !['playing', 'paused'].includes(game.status)}
+              onClick={() => {
+                send('SetPaused', game.status === 'paused' ? '0' : '1')
+              }}>{game.status === 'paused' ? 'Resume' : 'Pause'}</button>
+            <button type="button" disabled={!ready || !!error} onClick={start}>Restart</button>
+            <button type="button" disabled={!ready || !!error} aria-pressed={muted} onClick={() => {
+              send('SetMuted', muted ? '0' : '1'); setMuted(!muted)
+            }}>{muted ? 'Sound off' : 'Sound on'}</button>
+          </div>
+        </div>
+      </section>
+      <div id="pong-controls" className="pong-tips">
+        <p><strong>How to herd</strong> Move your mouse or drag on the pasture. Keyboard? Click the field, then use ↑ / ↓ or W / S. Space pauses.</p>
+        <p><strong>A little cow wisdom</strong> Catch the hay at the edge of your cow for a sharper shot. Losing is just an excuse for one moo-re round.</p>
+      </div>
+      <p className="pong-footnote">Made with Unity · fueled by hay · approved by absolutely no cows</p>
     </div>
   )
 }

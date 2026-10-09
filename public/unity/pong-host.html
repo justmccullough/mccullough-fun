@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pasture Pong Unity player</title>
+  <style>
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #7e8c5a; }
+    canvas { display: block; width: 100%; height: 100%; touch-action: none; outline: none; }
+  </style>
+</head>
+<body>
+  <canvas id="pasture-pong-canvas" width="960" height="540" tabindex="0"
+    aria-label="Pasture Pong field. Move with mouse, touch, arrow keys, or W and S. Space pauses."></canvas>
+  <script>
+    const canvas = document.querySelector('canvas');
+    const keys = new Set();
+    let instance, status = 'idle';
+    function notify(type, detail) { parent.postMessage({ type, detail }, location.origin); }
+    function send(method, value = '') { if (instance) instance.SendMessage('PasturePong', method, String(value)); }
+    function direction() {
+      send('SetDirection', Number(keys.has('ArrowUp') || keys.has('w')) - Number(keys.has('ArrowDown') || keys.has('s')));
+    }
+    function pointer(event) {
+      if (status !== 'playing') return;
+      if (event.pointerType !== 'mouse' && event.type !== 'pointerdown' && !event.buttons) return;
+      const rect = canvas.getBoundingClientRect();
+      send('SetPointer', Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height)));
+    }
+    canvas.addEventListener('pointermove', pointer);
+    canvas.addEventListener('pointerdown', (event) => {
+      canvas.focus();
+      canvas.setPointerCapture(event.pointerId);
+      pointer(event);
+    });
+    window.addEventListener('keydown', (event) => {
+      const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+      if (['ArrowUp', 'ArrowDown', 'w', 's'].includes(key)) {
+        event.preventDefault(); keys.add(key); direction();
+      } else if ((key === ' ' || key === 'Escape') && !event.repeat) {
+        event.preventDefault(); keys.clear(); send('SetPaused', status === 'paused' ? '0' : '1');
+      }
+    });
+    window.addEventListener('keyup', (event) => {
+      keys.delete(event.key.length === 1 ? event.key.toLowerCase() : event.key);
+      direction();
+    });
+    window.addEventListener('blur', () => { keys.clear(); send('SetDirection', '0'); });
+    window.addEventListener('message', (event) => {
+      if (event.origin !== location.origin || event.source !== parent || event.data.type !== 'pong-command') return;
+      const { method, value } = event.data;
+      if (!['Restart', 'SetDifficulty', 'SetPaused', 'SetMuted'].includes(method)) return;
+      keys.clear();
+      send('SetDirection', '0');
+      send(method, value);
+      if (method === 'Restart' || method === 'SetDifficulty' || (method === 'SetPaused' && value === '0')) canvas.focus();
+    });
+    window.addEventListener('pasture-pong-state', ({ detail }) => {
+      status = detail.status;
+      notify('pong-state', detail);
+    });
+    window.addEventListener('error', (event) => {
+      console.error('Pasture Pong player:', event.error || event.message);
+      notify('pong-error', 'The pasture could not open. Please try again, or use a browser with WebGL 2 support.');
+    });
+    async function openPasture() {
+      const response = await fetch('./pong/version.json', { cache: 'no-store' });
+      if (!response.ok) throw new Error('Unity build version could not be downloaded.');
+      const { version } = await response.json();
+      if (!/^[a-f0-9]{64}$/.test(version)) throw new Error('Invalid Unity build version.');
+      const asset = (extension) => './pong/Build/pong.' + extension + '?v=' + version;
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = asset('loader.js');
+        script.onload = resolve;
+        script.onerror = () => reject(new Error('Unity loader could not be downloaded.'));
+        document.head.appendChild(script);
+      });
+      return createUnityInstance(canvas, {
+      dataUrl: asset('data'),
+      frameworkUrl: asset('framework.js'),
+      codeUrl: asset('wasm'),
+      companyName: 'McCullough',
+      productName: 'Pasture Pong',
+      productVersion: '1.0',
+      matchWebGLToCanvasSize: true,
+      devicePixelRatio: Math.min(devicePixelRatio || 1, 2),
+      showBanner: (message, type) => {
+        if (type === 'error') notify('pong-error', message);
+        else console.warn(message);
+      }
+      }, (progress) => notify('pong-progress', progress));
+    }
+    openPasture().then((player) => {
+      instance = player;
+      notify('pong-ready', null);
+    }).catch((error) => {
+      console.error('Pasture Pong Unity runtime:', error);
+      notify('pong-error', 'The pasture could not open. Please try again, or use a browser with WebGL 2 support.');
+    });
+  </script>
+</body>
+</html>

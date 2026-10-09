@@ -1,129 +1,58 @@
-.pong {
-  text-align: center;
-}
-
-.pong-head {
-  margin-bottom: 1.4rem;
-}
-
-.pong-kicker {
-  font-family: var(--font-hand);
-  font-size: 1.6rem;
-  color: var(--sage);
-}
-
-.pong-title {
-  font-size: clamp(2.2rem, 5vw, 3.2rem);
-  margin: 0.1rem 0 0.5rem;
-}
-
-.pong-intro {
-  max-width: 36rem;
-  margin: 0 auto;
-  color: var(--ink-soft);
-}
-
-/* ---------- Scoreboard ---------- */
-.pong-scoreboard {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1.3rem;
-  margin: 0 auto 1.3rem;
-}
-
-.pong-score {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-width: 7rem;
-  padding: 0.55rem 1.3rem;
-  background: var(--paper);
-  border: 2px solid var(--cream-deep);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-soft);
-}
-
-.pong-score-name {
-  font-size: 0.76rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--ink-soft);
-}
-
-.pong-score-value {
-  font-family: var(--font-display);
-  font-size: 2.6rem;
-  font-weight: 600;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-
-.pong-score-player .pong-score-value {
-  color: var(--terracotta-dark);
-}
-
-.pong-score-cpu .pong-score-value {
-  color: var(--sage);
-}
-
-.pong-score-sep {
-  font-family: var(--font-hand);
-  font-size: 1.7rem;
-  color: var(--ink-soft);
-}
-
-/* ---------- Game stage ---------- */
-.pong-stage {
-  position: relative;
-  max-width: 720px;
-  margin: 0 auto;
-}
-
-.pong-canvas {
-  display: block;
-  width: 100%;
-  height: auto;
-  background: #46311f;
-  border: 3px solid var(--cream-deep);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-soft);
-  touch-action: none;
-}
-
-.pong-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.45rem;
-  padding: 1.5rem;
-  text-align: center;
-  background: rgba(70, 49, 31, 0.86);
-  border-radius: var(--radius);
-  color: var(--paper);
-}
-
-.pong-overlay-emoji {
-  font-size: 3rem;
-}
-
-.pong-overlay-title {
-  color: var(--paper);
-  font-size: clamp(1.6rem, 4vw, 2.2rem);
-}
-
-.pong-overlay-text {
-  max-width: 24rem;
-  color: rgba(251, 243, 228, 0.85);
-  margin-bottom: 0.7rem;
-}
-
-.pong-hint {
-  margin-top: 1rem;
-  font-size: 0.92rem;
-  color: var(--ink-soft);
+.pong { max-width: 1040px; text-align: center; }
+.pong-head { margin-bottom: 1.8rem; }
+.pong-kicker { font-family: var(--font-hand); font-size: 1.6rem; color: var(--sage); }
+.pong-title { font-size: clamp(2.8rem, 6vw, 4.4rem); margin: .3rem 0 .8rem; }
+.pong-title > span { color: var(--terracotta); }
+.pong-intro { color: var(--ink-soft); }
+.pong-card { padding: 1.3rem; background: var(--paper); border: 1px solid var(--cream-deep); border-radius: 26px; box-shadow: var(--shadow-soft); }
+.pong-toolbar, .pong-bottom-bar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.pong-levels { display: flex; gap: .25rem; padding: .25rem; border-radius: 999px; background: var(--cream); }
+.pong-levels button, .pong-actions button { border: none; background: transparent; color: var(--ink-soft); font-size: .9rem; font-weight: 800; padding: .5rem 1.1rem; border-radius: 999px; }
+.pong-levels button[aria-pressed="true"] { background: var(--terracotta); color: var(--paper); box-shadow: 0 3px 8px #4a352620; }
+.pong button:disabled { opacity: .5; cursor: not-allowed; }
+.pong button:focus-visible, .pong-canvas:focus-visible { outline: 3px solid var(--mustard); outline-offset: 4px; }
+.pong-rules { font-size: .82rem; color: var(--ink-soft); }
+.pong-level-note { text-align: left; font-size: .8rem; color: var(--ink-soft); margin: .6rem 0 1.2rem; }
+.pong-scoreboard { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 1rem; padding: .3rem .5rem 1.3rem; }
+.pong-team { display: flex; align-items: center; gap: .65rem; text-align: left; }
+.pong-team-cpu { justify-content: flex-end; text-align: right; }
+.pong-avatar { display: grid; place-items: center; width: 3.3rem; height: 3.3rem; border-radius: 50%; background: var(--cream); font-size: 1.9rem; }
+.pong-score-name { display: block; font-weight: 800; color: var(--terracotta-dark); }
+.pong-team-cpu .pong-score-name { color: var(--sage); }
+.pong-team-note { display: block; font-size: .76rem; color: var(--ink-soft); }
+.pong-score { display: flex; gap: .8rem; font-family: var(--font-display); font-size: 2.6rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.pong-score-sep { color: var(--cream-deep); }
+.pong-stage { position: relative; overflow: hidden; border-radius: 16px; border: 5px solid var(--cream-deep); background: var(--sage); aspect-ratio: 16 / 9; }
+.pong-canvas { display: block; width: 100%; height: 100%; border: 0; touch-action: none; }
+.pong-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .65rem; padding: 1.3rem; background: #fffaf0ed; }
+.pong-overlay-emoji { font-size: 3rem; line-height: 1; }
+.pong-overlay h2 { font-size: clamp(1.3rem, 3vw, 2.2rem); }
+.pong-overlay p { max-width: 28rem; color: var(--ink-soft); font-size: .95rem; overflow-wrap: anywhere; }
+.pong-overlay .btn { margin-top: .3rem; }
+.pong-overlay progress { width: min(80%, 260px); accent-color: var(--terracotta); }
+.pong-bottom-bar { padding-top: 1rem; text-align: left; }
+.pong-commentary { font-family: var(--font-hand); font-size: 1.4rem; color: var(--sage); }
+.pong-actions { display: flex; gap: .15rem; }
+.pong-actions button { border: 1px solid var(--cream-deep); padding: .4rem .75rem; font-size: .8rem; }
+.pong-actions button:not(:disabled):hover { background: var(--cream); color: var(--terracotta-dark); }
+.pong-tips { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; text-align: left; margin: 1.6rem .5rem; font-size: .87rem; color: var(--ink-soft); }
+.pong-tips strong { display: block; color: var(--ink); margin-bottom: .2rem; }
+.pong-footnote { color: var(--ink-soft); font-size: .75rem; }
+@media (max-width: 600px) {
+  .pong { padding: 1.7rem .75rem 3rem; }
+  .pong-card { padding: .75rem; border-radius: 20px; }
+  .pong-toolbar { justify-content: center; gap: .5rem; }
+  .pong-level-note { text-align: center; }
+  .pong-scoreboard { gap: .4rem; padding: .3rem 0 1rem; }
+  .pong-avatar, .pong-team-note { display: none; }
+  .pong-score-name { font-size: .8rem; }
+  .pong-score { font-size: 2rem; gap: .4rem; }
+  .pong-stage { aspect-ratio: 16 / 10; }
+  .pong-overlay { padding: .6rem; gap: .3rem; }
+  .pong-overlay-emoji { font-size: 1.7rem; }
+  .pong-overlay p { font-size: .76rem; max-width: 19rem; }
+  .pong-overlay .btn { padding: .5rem 1rem; font-size: .82rem; }
+  .pong-bottom-bar { justify-content: center; gap: .5rem; text-align: center; }
+  .pong-commentary { font-size: 1.25rem; }
+  .pong-tips { grid-template-columns: 1fr; gap: .8rem; margin: 1.2rem .3rem; }
 }
