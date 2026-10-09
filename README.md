@@ -47,3 +47,29 @@ Check in rebuilt Web assets alongside source changes: the existing site
 deployment only needs `npm run build`, not a Unity editor or license.
 The hosting configuration serves `.wasm` as `application/wasm` and excludes
 Unity assets from SPA fallback so missing downloads fail explicitly.
+
+## Moo Quest
+
+Visit `/mooquest` for a cozy, real-time farm adventure. Grumbleweed the goat
+has stolen the Golden Cowbell and the herd can't moo! Pick a hero:
+
+- **Kaite** (blonde, blue eyes) — Sunshine Spin tickles everyone nearby.
+- **Laura** (brunette, brown eyes) — Chocolate-Milk Dash zooms through critters.
+- **Grace** (auburn, brown eyes) — Hay-Bale Toss bowls over troublemakers.
+- **Audrey** (light brown, hazel eyes) — Moo-sic Lullaby puts critters to sleep.
+
+Explore Moo-ville Barnyard, Clover Meadow, Mudpuddle Marsh, and Moonberry Woods to
+rescue three lost cows and their cowbell pieces, then out-giggle Grumbleweed on
+the hilltop. Combat is gentle tickling: critters giggle and run home, and the
+hero just gets "giggled out" and wakes up safely back at the barn. Progress
+auto-saves in the browser.
+
+Controls: arrow keys/WASD move, Space/Enter tickles and talks, K/Shift uses the
+special move, Escape/P pauses. Touch devices get an on-screen joystick and buttons.
+
+Source lives in `unity/MooQuest` (all art, music, and sounds are generated in
+code). Rebuild with `npm run build:unity:mooquest`, or
+`.\scripts\build-unity.ps1 -Game mooquest`; other platforms can use
+`-executeMethod BuildMooQuest.Build`. The build validates the maps and plays
+through the whole adventure (every hero's special, all three rescues, and the
+boss) before exporting to `public/unity/mooquest`.
