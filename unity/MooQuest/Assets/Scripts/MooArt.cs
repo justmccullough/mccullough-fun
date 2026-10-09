@@ -114,6 +114,23 @@ public static class MooArt
         return material;
     }
 
+    private static Material shadow;
+
+    // Soft see-through disc used as a cheap "blob" shadow so characters feel grounded.
+    public static Transform BlobShadow(Transform parent)
+    {
+        if (shadow == null)
+            shadow = new Material(Shader.Find("Legacy Shaders/Transparent/Diffuse")) { color = new Color(0, 0, 0, .28f), renderQueue = 3000 };
+        var item = new GameObject("Shadow");
+        item.transform.SetParent(parent, false);
+        item.AddComponent<MeshFilter>().sharedMesh = Mesh(Shape.Cylinder);
+        var renderer = item.AddComponent<MeshRenderer>();
+        renderer.sharedMaterial = shadow;
+        renderer.shadowCastingMode = ShadowCastingMode.Off;
+        renderer.receiveShadows = false;
+        return item.transform;
+    }
+
     public static Transform Part(Transform parent, Shape shape, Vector3 position, Vector3 scale, Color color,
         Vector3 euler = default, bool glowing = false)
     {
