@@ -5,6 +5,7 @@ import Home from './pages/Home.jsx'
 import Gallery from './pages/Gallery.jsx'
 import Cows from './pages/Cows.jsx'
 import PongGame from './pages/PongGame.jsx'
+import MooQuest from './pages/MooQuest.jsx'
 import Countdown from './pages/Countdown.jsx'
 import NotFound from './pages/NotFound.jsx'
 import './styles/App.css'
@@ -19,6 +20,7 @@ export default function App() {
           <Route path="/gallery" element={<Gallery />} />
           <Route path="/cows" element={<Cows />} />
           <Route path="/pong" element={<PongGame />} />
+          <Route path="/mooquest" element={<MooQuest />} />
           <Route path="/christmas" element={<Countdown />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

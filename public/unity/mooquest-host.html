@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Moo Quest Unity player</title>
+  <style>
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #8fbf5a; font-family: system-ui, sans-serif; }
+    canvas { display: block; width: 100%; height: 100%; touch-action: none; outline: none; }
+    .touch { position: absolute; inset: 0; pointer-events: none; display: none; }
+    body.coarse.playing .touch { display: block; }
+    .stick { position: absolute; left: 18px; bottom: 18px; width: 120px; height: 120px; border-radius: 50%;
+      background: rgba(255, 255, 255, .25); border: 3px solid rgba(255, 255, 255, .6); pointer-events: auto; touch-action: none; }
+    .knob { position: absolute; left: 35px; top: 35px; width: 50px; height: 50px; border-radius: 50%;
+      background: rgba(255, 143, 200, .9); box-shadow: 0 3px 0 rgba(0, 0, 0, .2); }
+    .pad { position: absolute; right: 18px; bottom: 18px; display: grid; gap: 10px; justify-items: end; pointer-events: auto; }
+    .pad button { border: 3px solid #fff; border-radius: 999px; color: #fff; font: 700 15px system-ui, sans-serif;
+      box-shadow: 0 4px 0 rgba(0, 0, 0, .2); touch-action: manipulation; }
+    .pad .tickle { width: 82px; height: 82px; background: #ff6fa8; }
+    .pad .special { width: 64px; height: 64px; background: #f2a33a; margin-right: 70px; margin-top: -40px; }
+    .pause { position: absolute; top: 84px; right: 14px; width: 44px; height: 44px; border-radius: 50%; pointer-events: auto;
+      border: 2px solid #fff; background: rgba(60, 40, 30, .6); color: #fff; font: 700 16px system-ui, sans-serif; }
+  </style>
+</head>
+<body>
+  <canvas id="moo-quest-canvas" width="960" height="540" tabindex="0"
+    aria-label="Moo Quest. Move with arrow keys or WASD, Space to tickle and talk, K or Shift for your special move, Escape to pause."></canvas>
+  <div class="touch" aria-hidden="true">
+    <div class="stick"><div class="knob"></div></div>
+    <div class="pad">
+      <button type="button" class="special" data-press="special">Special</button>
+      <button type="button" class="tickle" data-press="action">Tickle</button>
+    </div>
+    <button type="button" class="pause" data-press="pause">II</button>
+  </div>
+  <script>
+    const canvas = document.querySelector('canvas');
+    const stick = document.querySelector('.stick');
+    const knob = document.querySelector('.knob');
+    let instance, status = 'idle', stickId = null;
+    function notify(type, detail) { parent.postMessage({ type, detail }, location.origin); }
+    function send(method, value = '') { if (instance) instance.SendMessage('MooQuest', method, String(value)); }
+
+    if (matchMedia('(pointer: coarse)').matches) document.body.classList.add('coarse');
+
+    function moveStick(event) {
+      const rect = stick.getBoundingClientRect();
+      let x = (event.clientX - rect.left - rect.width / 2) / (rect.width / 2);
+      let y = (event.clientY - rect.top - rect.height / 2) / (rect.height / 2);
+      const length = Math.hypot(x, y);
+      if (length > 1) { x /= length; y /= length; }
+      knob.style.transform = `translate(${x * 35}px, ${y * 35}px)`;
+      send('SetStick', `${x.toFixed(3)},${(-y).toFixed(3)}`);
+    }
+    function releaseStick() {
+      stickId = null;
+      knob.style.transform = '';
+      send('SetStick', '0,0');
+    }
+    stick.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      stickId = event.pointerId;
+      stick.setPointerCapture(event.pointerId);
+      moveStick(event);
+    });
+    stick.addEventListener('pointermove', (event) => { if (event.pointerId === stickId) moveStick(event); });
+    stick.addEventListener('pointerup', releaseStick);
+    stick.addEventListener('pointercancel', releaseStick);
+    document.querySelectorAll('[data-press]').forEach((button) => {
+      button.addEventListener('pointerdown', (event) => {
+        event.preventDefault();
+        send('Press', button.dataset.press);
+      });
+    });
+    canvas.addEventListener('pointerdown', () => canvas.focus());
+    window.addEventListener('keydown', (event) => {
+      if ([' ', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) event.preventDefault();
+    });
+    window.addEventListener('blur', () => releaseStick());
+    window.addEventListener('message', (event) => {
+      if (event.origin !== location.origin || event.source !== parent || event.data.type !== 'moo-command') return;
+      const { method, value } = event.data;
+      if (method === 'Focus') { canvas.focus(); return; }
+      if (!['NewGame', 'SetPaused', 'SetMuted', 'SetStick', 'Press'].includes(method)) return;
+      send(method, value);
+      if (method === 'NewGame' || (method === 'SetPaused' && value === '0')) canvas.focus();
+    });
+    window.addEventListener('moo-quest-state', ({ detail }) => {
+      status = detail.status;
+      document.body.classList.toggle('playing', status === 'playing');
+      if (status !== 'playing' && stickId !== null) releaseStick();
+      notify('moo-state', detail);
+    });
+    window.addEventListener('error', (event) => {
+      console.error('Moo Quest player:', event.error || event.message);
+      notify('moo-error', 'The farm could not open. Please try again, or use a browser with WebGL 2 support.');
+    });
+    async function openFarm() {
+      const response = await fetch('./mooquest/version.json', { cache: 'no-store' });
+      if (!response.ok) throw new Error('Unity build version could not be downloaded.');
+      const { version } = await response.json();
+      if (!/^[a-f0-9]{64}$/.test(version)) throw new Error('Invalid Unity build version.');
+      const asset = (extension) => './mooquest/Build/mooquest.' + extension + '?v=' + version;
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = asset('loader.js');
+        script.onload = resolve;
+        script.onerror = () => reject(new Error('Unity loader could not be downloaded.'));
+        document.head.appendChild(script);
+      });
+      return createUnityInstance(canvas, {
+        dataUrl: asset('data'),
+        frameworkUrl: asset('framework.js'),
+        codeUrl: asset('wasm'),
+        companyName: 'McCullough',
+        productName: 'Moo Quest',
+        productVersion: '1.0',
+        matchWebGLToCanvasSize: true,
+        devicePixelRatio: Math.min(devicePixelRatio || 1, 2),
+        showBanner: (message, type) => {
+          if (type === 'error') notify('moo-error', message);
+          else console.warn(message);
+        }
+      }, (progress) => notify('moo-progress', progress));
+    }
+    openFarm().then((player) => {
+      instance = player;
+      notify('moo-ready', null);
+      canvas.focus();
+    }).catch((error) => {
+      console.error('Moo Quest Unity runtime:', error);
+      notify('moo-error', 'The farm could not open. Please try again, or use a browser with WebGL 2 support.');
+    });
+  </script>
+</body>
+</html>

@@ -44,6 +44,14 @@ export default function NavBar() {
           Pong
         </NavLink>
         <NavLink
+          to="/mooquest"
+          className={({ isActive }) =>
+            isActive ? 'navbar-link is-active' : 'navbar-link'
+          }
+        >
+          Moo Quest
+        </NavLink>
+        <NavLink
           to="/christmas"
           className={({ isActive }) =>
             isActive ? 'navbar-link is-active' : 'navbar-link'

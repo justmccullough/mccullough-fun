@@ -8,7 +8,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "build:unity": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts\\build-unity.ps1"
+    "build:unity": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts\\build-unity.ps1",
+    "build:unity:mooquest": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts\\build-unity.ps1 -Game mooquest"
   },
   "dependencies": {
     "react": "^19.1.0",
