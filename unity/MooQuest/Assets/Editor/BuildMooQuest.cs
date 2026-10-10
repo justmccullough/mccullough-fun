@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Security.Cryptography;
@@ -118,6 +119,12 @@ public static class BuildMooQuest
             else Require(Count(all, 'E') == 1, area.Name + " has an exit");
             if (a >= 1 && a <= 3) Require(Count(all, 'C') == 1 && area.Rescue != null && area.Critter >= 0, area.Name + " has a cow to rescue");
             if (a == 4) Require(Count(all, 'G') == 1, "Hilltop has Grumbleweed");
+            // Every Moo-nie, milk bottle, acorn, and lost cow has to be walkable; a ring of trees once sealed one off.
+            HashSet<Vector2Int> open = Walkable(area.Map);
+            for (int r = 0; r < area.Map.Length; r++)
+                for (int x = 0; x < area.Map[r].Length; x++)
+                    if ("$mkC".IndexOf(area.Map[r][x]) >= 0)
+                        Require(open.Contains(new Vector2Int(x, r)), area.Name + " '" + area.Map[r][x] + "' at map row " + r + ", column " + x + " is walled off");
         }
         Require(coins >= MooData.HatGoal, "Enough Moo-nies for the crown");
         foreach (MooMusic.Track track in Enum.GetValues(typeof(MooMusic.Track)))
@@ -315,6 +322,33 @@ public static class BuildMooQuest
         foreach (MooQuest.Critter c in game.critters)
             if (c != keep) c.pos = new Vector2(-50, -50);
         keep.sleep = keep.stun = 0;
+    }
+
+    // Map tiles the hero can reach from the start, treating gates as open and marsh water as bridged by a hay bale.
+    private static HashSet<Vector2Int> Walkable(string[] map)
+    {
+        var open = new HashSet<Vector2Int>();
+        var queue = new Queue<Vector2Int>();
+        for (int r = 0; r < map.Length; r++)
+            if (map[r].IndexOf('P') >= 0)
+            {
+                open.Add(new Vector2Int(map[r].IndexOf('P'), r));
+                queue.Enqueue(new Vector2Int(map[r].IndexOf('P'), r));
+            }
+        Vector2Int[] dirs = { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
+        while (queue.Count > 0)
+        {
+            Vector2Int t = queue.Dequeue();
+            foreach (Vector2Int d in dirs)
+            {
+                Vector2Int n = t + d;
+                if (n.y < 0 || n.y >= map.Length || n.x < 0 || n.x >= map[n.y].Length || open.Contains(n)) continue;
+                if ("#ToRSNB".IndexOf(map[n.y][n.x]) >= 0) continue;
+                open.Add(n);
+                queue.Enqueue(n);
+            }
+        }
+        return open;
     }
 
     private static int Count(string text, char ch)
