@@ -3,6 +3,9 @@ using UnityEngine;
 public sealed class MooCharacter
 {
     public string Name, Looks, Tagline, Special, SpecialInfo;
+    // The Kenney mini character she's played by, and the colormap columns its hair is painted from.
+    public string Model;
+    public int[] HairSwatches;
     public Color Hair, Eyes, Shirt;
     public int HairStyle, MaxGiggles, Power;
     public float Speed, Cooldown;
@@ -39,7 +42,7 @@ public static class MooData
             Tagline = "Sunny, brave, and always first to yell \"Let's moo-ve!\"",
             Special = "Sunshine Spin", SpecialInfo = "Twirls so fast that everyone nearby gets tickled.",
             Hair = Hex("f2d16b"), Eyes = Hex("2f7fd8"), Shirt = Hex("7fc8f8"),
-            HairStyle = 0, MaxGiggles = 5, Power = 1, Speed = 5.6f, Cooldown = 4f
+            HairStyle = 0, Model = "character-female-b", HairSwatches = new[] { 11 }, MaxGiggles = 5, Power = 1, Speed = 5.6f, Cooldown = 4f
         },
         new MooCharacter
         {
@@ -47,7 +50,7 @@ public static class MooData
             Tagline = "Quick as a calf on roller skates. The fastest boots on the farm.",
             Special = "Chocolate-Milk Dash", SpecialInfo = "Zooms forward in a blur and bonks critters out of the way.",
             Hair = Hex("5b3a23"), Eyes = Hex("6b3e1f"), Shirt = Hex("f49ac2"),
-            HairStyle = 1, MaxGiggles = 4, Power = 1, Speed = 7f, Cooldown = 2.5f
+            HairStyle = 1, Model = "character-female-e", HairSwatches = new[] { 1 }, MaxGiggles = 4, Power = 1, Speed = 7f, Cooldown = 2.5f
         },
         new MooCharacter
         {
@@ -55,7 +58,7 @@ public static class MooData
             Tagline = "Small but mighty. She tosses hay bales like pillows.",
             Special = "Hay-Bale Toss", SpecialInfo = "Bowls a rolling hay bale that bowls over critters.",
             Hair = Hex("b8452a"), Eyes = Hex("6b3e1f"), Shirt = Hex("8fd694"),
-            HairStyle = 2, MaxGiggles = 4, Power = 2, Speed = 5.2f, Cooldown = 3f
+            HairStyle = 2, Model = "character-female-d", HairSwatches = new[] { 11 }, MaxGiggles = 4, Power = 2, Speed = 5.2f, Cooldown = 3f
         },
         new MooCharacter
         {
@@ -63,7 +66,7 @@ public static class MooData
             Tagline = "Kind and cozy. Her songs could make a grumpy goat yawn.",
             Special = "Moo-sic Lullaby", SpecialInfo = "Sings a sleepy song. Critters nap and goats get dizzy.",
             Hair = Hex("a47c56"), Eyes = Hex("8a7f3c"), Shirt = Hex("c9a7f0"),
-            HairStyle = 3, MaxGiggles = 6, Power = 1, Speed = 5.4f, Cooldown = 6f
+            HairStyle = 3, Model = "character-female-f", HairSwatches = new[] { 13, 11 }, MaxGiggles = 6, Power = 1, Speed = 5.4f, Cooldown = 6f
         },
     };
 
@@ -117,7 +120,7 @@ public static class MooData
             },
             Signs = new[]
             {
-                "Clover Meadow! Press SPACE to tickle. Press K or SHIFT for your special move. Milk bottles refill your giggles!",
+                "Clover Meadow! {Tickle} to tickle. {Special} for your special move. Milk bottles refill your giggles!",
                 "Fun fact: bunnies are 98% fluff and 2% wiggle.",
             },
             Rescue = new[]
@@ -225,7 +228,7 @@ public static class MooData
         "Confused Cow|QUACK! ...Wait. That's not right.",
         "Bessie|Buttercup, Moo-donna, and Sir Moos-a-Lot each chased a piece of the bell and got lost.",
         "Bessie|Find them, bring back all three pieces, and we'll have a little chat with that grumpy goat.",
-        "Bessie|The critters out there are mischievous but harmless. Press SPACE to tickle them until they giggle away. Press K for your special move!",
+        "Bessie|The critters out there are mischievous but harmless. {Tickle} to tickle them until they giggle away. {Special} for your special move!",
         "Bessie|Start with the west gate to Clover Meadow. Off you go, partner!",
     };
 

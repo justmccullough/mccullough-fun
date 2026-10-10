@@ -67,8 +67,11 @@ auto-saves in the browser.
 Controls: arrow keys/WASD move, Space/Enter tickles and talks, K/Shift uses the
 special move, Escape/P pauses. Touch devices get an on-screen joystick and buttons.
 
-Source lives in `unity/MooQuest` (all art, music, and sounds are generated in
-code). Rebuild with `npm run build:unity:mooquest`, or
+Source lives in `unity/MooQuest`. The heroes, cows, and bunnies are CC0 models
+from Kenney's [Mini Characters](https://kenney.nl/assets/mini-characters) and
+[Cube Pets](https://kenney.nl/assets/cube-pets) packs (`Assets/Resources/Kenney`),
+with cow-ear headbands and hair colors added in code. Everything else, including
+the frogs, raccoons, Grumbleweed, music, and sounds, is generated in code. Rebuild with `npm run build:unity:mooquest`, or
 `.\scripts\build-unity.ps1 -Game mooquest`; other platforms can use
 `-executeMethod BuildMooQuest.Build`. The build validates the maps and plays
 through the whole adventure (every hero's special, all three rescues, and the

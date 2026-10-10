@@ -87,11 +87,33 @@
   color: var(--ink-soft);
 }
 
-@media (max-width: 540px) {
+/* On phones the links wrapped into a tall sticky column that covered a third
+   of the screen. Stack the brand over one swipeable row of links instead, and
+   let the bar scroll away so pages (and the games) get the whole screen. */
+@media (max-width: 640px) {
   .navbar {
-    padding: 0.8rem 1rem;
+    position: relative;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.45rem;
+    padding: 0.7rem 0.75rem 0.6rem;
   }
   .navbar-brand {
     font-size: 1.2rem;
+    justify-content: center;
+  }
+  .navbar-links {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .navbar-links::-webkit-scrollbar {
+    display: none;
+  }
+  .navbar-link {
+    flex: none;
+    padding: 0.45rem 0.85rem;
+    font-size: 0.92rem;
   }
 }

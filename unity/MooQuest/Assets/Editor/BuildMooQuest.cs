@@ -91,7 +91,11 @@ public static class BuildMooQuest
             if (other != c[1]) Require(c[1].Speed > other.Speed, "Laura is fastest");
             if (other != c[2]) Require(c[2].Power > other.Power, "Grace is strongest");
             if (other != c[3]) Require(c[3].MaxGiggles > other.MaxGiggles, "Audrey has the most giggles");
+            Require(Resources.Load<GameObject>("Kenney/Characters/" + other.Model) != null, other.Name + "'s Kenney model is imported");
         }
+        foreach (string pet in new[] { "animal-cow", "animal-bunny" })
+            Require(Resources.Load<GameObject>("Kenney/Pets/" + pet) != null, "Kenney " + pet + " is imported");
+        Require(Resources.Load<Texture2D>("Kenney/Characters/colormap").isReadable, "Hero colormap is readable for hair colors");
         int coins = 0;
         for (int a = 0; a < MooData.Areas.Length; a++)
         {

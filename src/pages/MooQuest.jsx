@@ -17,6 +17,8 @@ const countPieces = (mask) => [1, 2, 4].filter((bit) => mask & bit).length
 
 export default function MooQuest() {
   const frameRef = useRef(null)
+  const stageRef = useRef(null)
+  const [full, setFull] = useState(false)
   const [game, setGame] = useState(INITIAL)
   const [progress, setProgress] = useState(0)
   const [ready, setReady] = useState(false)
@@ -60,6 +62,37 @@ export default function MooQuest() {
     }
   }, [attempt])
 
+  // Phones need the whole screen to make the game readable. Use real fullscreen where the browser allows it
+  // (and try to lock landscape); otherwise just fill the window, which also works on iPhone.
+  async function enterFullscreen() {
+    const stage = stageRef.current
+    setFull(true)
+    if (stage?.requestFullscreen && document.fullscreenEnabled) {
+      try {
+        await stage.requestFullscreen({ navigationUI: 'hide' })
+        await screen.orientation?.lock?.('landscape')
+      } catch { /* Filling the window is fine too. */ }
+    }
+    send('Focus')
+  }
+
+  function exitFullscreen() {
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {})
+    setFull(false)
+    send('Focus')
+  }
+
+  useEffect(() => {
+    const changed = () => { if (!document.fullscreenElement) setFull(false) }
+    document.addEventListener('fullscreenchange', changed)
+    return () => document.removeEventListener('fullscreenchange', changed)
+  }, [])
+
+  useEffect(() => {
+    document.body.classList.toggle('moo-is-full', full)
+    return () => document.body.classList.remove('moo-is-full')
+  }, [full])
+
   const live = ready && !error
   const inAdventure = ['playing', 'dialogue', 'paused'].includes(game.status)
   const paused = game.status === 'paused'
@@ -87,11 +120,12 @@ export default function MooQuest() {
           {game.crown && <span>👑 Hero of the Herd</span>}
         </div>
 
-        <div className="moo-stage">
+        <div ref={stageRef} className={full ? 'moo-stage is-full' : 'moo-stage'}>
           <iframe key={attempt} ref={frameRef} className="moo-canvas"
             src={`${import.meta.env.BASE_URL}unity/mooquest-host.html`}
             title="Unity Moo Quest game" aria-describedby="moo-controls"
             onError={() => setError('The Unity player could not load. Please try again.')} />
+          {full && <button type="button" className="moo-exit-full" onClick={exitFullscreen}>✕ Exit fullscreen</button>}
           {(error || !ready) && (
             <div className="moo-overlay">
               <span className="moo-overlay-emoji" aria-hidden="true">{error ? '🌧️' : '🐮'}</span>
@@ -111,6 +145,7 @@ export default function MooQuest() {
             <button type="button" disabled={!live} aria-pressed={game.muted}
               onClick={() => send('SetMuted', game.muted ? '0' : '1')}>{game.muted ? 'Sound off' : 'Sound on'}</button>
             <button type="button" disabled={!live} onClick={startOver}>Start over</button>
+            <button type="button" className="moo-full-button" disabled={!live} onClick={enterFullscreen}>⛶ Fullscreen</button>
           </div>
         </div>
       </section>
@@ -130,7 +165,7 @@ export default function MooQuest() {
 
       <div id="moo-controls" className="moo-tips">
         <p><strong>How to play</strong> Click the game, then move with the arrow keys or WASD. Space tickles critters and chats with cows.
-          K or Shift uses your special move. Esc pauses. On a phone or tablet, use the on-screen joystick and buttons.</p>
+          K or Shift uses your special move. Esc pauses. On a phone or tablet, tap Fullscreen, turn your phone sideways, and use the on-screen joystick and buttons.</p>
         <p><strong>Farmer tips</strong> Nobody ever gets hurt here — critters just giggle until they run home. Drink milk to refill your
           giggles, push hay bales to build bridges, and your adventure saves itself automatically.</p>
       </div>

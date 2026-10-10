@@ -7,19 +7,28 @@
   <style>
     html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #8fbf5a; font-family: system-ui, sans-serif; }
     canvas { display: block; width: 100%; height: 100%; touch-action: none; outline: none; }
+    :root { --edge: min(18px, 4vh); --stick: min(120px, 40vh); --knob: calc(var(--stick) * .42);
+      --tickle: min(82px, 30vh); --special: min(64px, 23vh); --charge: 1; }
     .touch { position: absolute; inset: 0; pointer-events: none; display: none; }
     body.coarse.playing .touch { display: block; }
-    .stick { position: absolute; left: 18px; bottom: 18px; width: 120px; height: 120px; border-radius: 50%;
-      background: rgba(255, 255, 255, .25); border: 3px solid rgba(255, 255, 255, .6); pointer-events: auto; touch-action: none; }
-    .knob { position: absolute; left: 35px; top: 35px; width: 50px; height: 50px; border-radius: 50%;
-      background: rgba(255, 143, 200, .9); box-shadow: 0 3px 0 rgba(0, 0, 0, .2); }
-    .pad { position: absolute; right: 18px; bottom: 18px; display: grid; gap: 10px; justify-items: end; pointer-events: auto; }
-    .pad button { border: 3px solid #fff; border-radius: 999px; color: #fff; font: 700 15px system-ui, sans-serif;
-      box-shadow: 0 4px 0 rgba(0, 0, 0, .2); touch-action: manipulation; }
-    .pad .tickle { width: 82px; height: 82px; background: #ff6fa8; }
-    .pad .special { width: 64px; height: 64px; background: #f2a33a; margin-right: 70px; margin-top: -40px; }
-    .pause { position: absolute; top: 84px; right: 14px; width: 44px; height: 44px; border-radius: 50%; pointer-events: auto;
-      border: 2px solid #fff; background: rgba(60, 40, 30, .6); color: #fff; font: 700 16px system-ui, sans-serif; }
+    .stick { position: absolute; left: var(--edge); bottom: var(--edge); width: var(--stick); height: var(--stick); border-radius: 50%;
+      box-sizing: border-box; background: rgba(255, 255, 255, .25); border: 3px solid rgba(255, 255, 255, .6); pointer-events: auto; touch-action: none; }
+    .knob { position: absolute; left: calc(50% - var(--knob) / 2); top: calc(50% - var(--knob) / 2); width: var(--knob); height: var(--knob);
+      border-radius: 50%; background: rgba(255, 143, 200, .9); box-shadow: 0 3px 0 rgba(0, 0, 0, .2); }
+    .pad button { position: absolute; border: 3px solid #fff; border-radius: 999px; color: #fff; pointer-events: auto;
+      font: 700 clamp(10px, 4.5vh, 15px) system-ui, sans-serif; box-shadow: 0 4px 0 rgba(0, 0, 0, .2); touch-action: manipulation; }
+    .pad .tickle { right: var(--edge); bottom: var(--edge); width: var(--tickle); height: var(--tickle); background: #ff6fa8; }
+    /* The Special button fills from the bottom as it recharges, and brightens when it's ready. */
+    .pad .special { right: calc(var(--edge) + var(--tickle) * .9); bottom: calc(var(--edge) + var(--tickle) * .62);
+      width: var(--special); height: var(--special); background: linear-gradient(to top, #f2a33a calc(var(--charge) * 100%), #8a6a50 0); }
+    .pad .special:not(.ready) { opacity: .75; }
+    .pause { position: absolute; top: 16vh; right: var(--edge); width: min(44px, 13vh); height: min(44px, 13vh); border-radius: 50%;
+      pointer-events: auto; border: 2px solid #fff; background: rgba(60, 40, 30, .6); color: #fff; font: 700 clamp(10px, 4.5vh, 16px) system-ui, sans-serif; }
+    /* Shown when the game is squeezed into a tall, narrow space (a phone held upright in fullscreen). */
+    .turn { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+      padding: 24px; text-align: center; background: rgba(40, 28, 22, .92); color: #fff; font: 700 20px system-ui, sans-serif; }
+    .turn span { font-size: 56px; }
+    body.portrait .turn { display: flex; }
   </style>
 </head>
 <body>
@@ -31,8 +40,9 @@
       <button type="button" class="special" data-press="special">Special</button>
       <button type="button" class="tickle" data-press="action">Tickle</button>
     </div>
-    <button type="button" class="pause" data-press="pause">II</button>
+    <button type="button" class="pause" data-press="pause" aria-label="Pause">II</button>
   </div>
+  <div class="turn" role="status"><span aria-hidden="true">📱↻</span>Turn your phone sideways to play</div>
   <script>
     const canvas = document.querySelector('canvas');
     const stick = document.querySelector('.stick');
@@ -41,7 +51,16 @@
     function notify(type, detail) { parent.postMessage({ type, detail }, location.origin); }
     function send(method, value = '') { if (instance) instance.SendMessage('MooQuest', method, String(value)); }
 
-    if (matchMedia('(pointer: coarse)').matches) document.body.classList.add('coarse');
+    const coarse = matchMedia('(pointer: coarse)').matches;
+    if (coarse) document.body.classList.add('coarse');
+    const special = document.querySelector('.special');
+    // The game's layout needs a landscape-ish screen; pause and ask to rotate when it gets too narrow.
+    function checkShape() {
+      const tall = innerWidth < innerHeight * 1.2;
+      document.body.classList.toggle('portrait', tall);
+      if (tall) send('SetPaused', '1');
+    }
+    addEventListener('resize', checkShape);
 
     function moveStick(event) {
       const rect = stick.getBoundingClientRect();
@@ -49,7 +68,8 @@
       let y = (event.clientY - rect.top - rect.height / 2) / (rect.height / 2);
       const length = Math.hypot(x, y);
       if (length > 1) { x /= length; y /= length; }
-      knob.style.transform = `translate(${x * 35}px, ${y * 35}px)`;
+      const reach = rect.width * .29;
+      knob.style.transform = `translate(${x * reach}px, ${y * reach}px)`;
       send('SetStick', `${x.toFixed(3)},${(-y).toFixed(3)}`);
     }
     function releaseStick() {
@@ -88,6 +108,8 @@
     window.addEventListener('moo-quest-state', ({ detail }) => {
       status = detail.status;
       document.body.classList.toggle('playing', status === 'playing');
+      document.documentElement.style.setProperty('--charge', detail.special);
+      special.classList.toggle('ready', detail.special >= 1);
       if (status !== 'playing' && stickId !== null) releaseStick();
       notify('moo-state', detail);
     });
@@ -125,6 +147,8 @@
     }
     openFarm().then((player) => {
       instance = player;
+      if (coarse) send('SetTouch', '1');
+      checkShape();
       notify('moo-ready', null);
       canvas.focus();
     }).catch((error) => {
