@@ -9,13 +9,21 @@ on:
     branches:
       - main
 
+# One run at a time per PR (or per branch for pushes). In-progress PR runs are
+# cancelled by newer ones, so merging a PR cancels its still-running preview
+# deploy instead of the close job deleting the preview environment out from
+# under it. Pushes to main are never cancelled; they queue behind each other.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   build_and_deploy_job:
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
     name: Build and Deploy Job
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
         with:
           submodules: true
           lfs: false
