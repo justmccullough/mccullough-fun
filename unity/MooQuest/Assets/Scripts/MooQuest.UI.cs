@@ -93,6 +93,8 @@ public sealed partial class MooQuest
         if (areaIndex >= 0 && cam != null)
         {
             Vector3 focus = World(playerPos);
+            // During conversations, aim a little lower so the hero and whoever she's talking to sit above the dialogue box.
+            if (CurrentLine != null) focus += Vector3.back * 2.6f;
             Vector3 offset = state.status == "victory"
                 ? Quaternion.Euler(0, partyTime * 12, 0) * new Vector3(0, 9, -9)
                 : CameraOffset;
@@ -117,9 +119,13 @@ public sealed partial class MooQuest
             g.Root.localPosition = new Vector3(-3.6f + i * 2.4f, .4f + hop, 0);
             float turn = chosen ? 180 + Mathf.Sin(time * 3) * 20 : 180 + Mathf.Sin(time + i * 2) * 10;
             g.Root.localRotation = Quaternion.Slerp(g.Root.localRotation, Quaternion.Euler(0, turn, 0), 10 * Mathf.Max(dt, .02f));
-            float wave = chosen ? -140 + Mathf.Sin(time * 10) * 25 : Mathf.Sin(time * 2 + i) * 6;
-            g.RightArm.localRotation = Quaternion.Euler(0, 0, wave);
-            g.LeftArm.localRotation = Quaternion.Euler(0, 0, chosen ? 20 : -Mathf.Sin(time * 2 + i) * 6);
+            if (g.Anim != null) g.Play(chosen ? "emote-yes" : "idle");
+            else
+            {
+                float wave = chosen ? -140 + Mathf.Sin(time * 10) * 25 : Mathf.Sin(time * 2 + i) * 6;
+                g.RightArm.localRotation = Quaternion.Euler(0, 0, wave);
+                g.LeftArm.localRotation = Quaternion.Euler(0, 0, chosen ? 20 : -Mathf.Sin(time * 2 + i) * 6);
+            }
             g.Root.localScale = Vector3.one * (chosen ? 1.12f : 1);
         }
         if (spotlight != null)
@@ -137,16 +143,29 @@ public sealed partial class MooQuest
         if (spin > 0) angle += (1 - spin / .5f) * 720;
         root.localRotation = Quaternion.Euler(0, angle, 0);
         bool moving = walking && state.status == "playing";
-        float stride = moving ? Mathf.Sin(time * 14) * 35 : 0;
-        hero.LeftLeg.localRotation = Quaternion.Euler(stride, 0, 0);
-        hero.RightLeg.localRotation = Quaternion.Euler(-stride, 0, 0);
-        hero.LeftArm.localRotation = Quaternion.Euler(-stride * .7f, 0, 0);
         bool tickling = swing > 0;
         hero.Feather.gameObject.SetActive(tickling || spin > 0);
-        hero.RightArm.localRotation = tickling
-            ? Quaternion.Euler(-80 + Mathf.Sin(swing * 60) * 30, 0, 0)
-            : Quaternion.Euler(stride * .7f, 0, 0);
-        float bob = moving ? Mathf.Abs(Mathf.Sin(time * 14)) * .08f : Mathf.Sin(time * 2) * .02f;
+        float bob;
+        if (hero.Anim != null)
+        {
+            // The model's own clips do the limbs; a little extra bounce keeps her bouncy.
+            // Each tickle restarts the swipe, even mid-swipe.
+            if (tickling && swing > .18f) hero.Restart("attack-melee-right");
+            else if (tickling) hero.Play("attack-melee-right", .05f);
+            else hero.Play(dashTime > 0 ? "sprint" : moving ? "walk" : "idle");
+            bob = moving ? Mathf.Abs(Mathf.Sin(time * 14)) * .04f : 0;
+        }
+        else
+        {
+            float stride = moving ? Mathf.Sin(time * 14) * 35 : 0;
+            hero.LeftLeg.localRotation = Quaternion.Euler(stride, 0, 0);
+            hero.RightLeg.localRotation = Quaternion.Euler(-stride, 0, 0);
+            hero.LeftArm.localRotation = Quaternion.Euler(-stride * .7f, 0, 0);
+            hero.RightArm.localRotation = tickling
+                ? Quaternion.Euler(-80 + Mathf.Sin(swing * 60) * 30, 0, 0)
+                : Quaternion.Euler(stride * .7f, 0, 0);
+            bob = moving ? Mathf.Abs(Mathf.Sin(time * 14)) * .08f : Mathf.Sin(time * 2) * .02f;
+        }
         hero.Body.localPosition = new Vector3(0, bob, 0);
         hero.Body.localScale = dashTime > 0 ? new Vector3(.85f, .9f, 1.3f) : Vector3.one;
         bool blink = invuln > 0 && dashTime <= 0 && Mathf.Repeat(time * 12, 1) < .5f;
@@ -157,6 +176,7 @@ public sealed partial class MooQuest
     private void AnimateCritter(Critter c)
     {
         if (c.model == null) return;
+        MooArt.PlayClip(c.model, c.giggling ? "dance" : c.sleep > 0 ? "static" : "walk");
         float hop = c.kind == 1 ? Mathf.Max(0, Mathf.Sin(c.phase * 5)) * .45f : Mathf.Abs(Mathf.Sin(c.phase * 9)) * .15f;
         if (c.sleep > 0) hop = 0;
         c.model.localPosition = World(c.pos, hop);
@@ -207,12 +227,14 @@ public sealed partial class MooQuest
         {
             hero.Root.localPosition = World(playerPos, Mathf.Abs(Mathf.Sin(partyTime * 6)) * .5f);
             hero.Root.localRotation = Quaternion.Euler(0, partyTime * 180, 0);
-            hero.RightArm.localRotation = hero.LeftArm.localRotation = Quaternion.Euler(0, 0, Mathf.Sin(partyTime * 10) * 40 + 150);
+            if (hero.Anim != null) hero.Play("emote-yes");
+            else hero.RightArm.localRotation = hero.LeftArm.localRotation = Quaternion.Euler(0, 0, Mathf.Sin(partyTime * 10) * 40 + 150);
             hero.Body.gameObject.SetActive(true);
         }
         for (int i = 0; i < dancers.Count; i++)
         {
             if (dancers[i] == null) continue;
+            MooArt.PlayClip(dancers[i], "dance");
             float angle = partyTime * .8f + i * Mathf.PI * 2 / dancers.Count;
             Vector2 at = playerPos + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * 3.6f;
             dancers[i].localPosition = World(at, Mathf.Abs(Mathf.Sin(partyTime * 6 + i)) * .6f);
@@ -339,7 +361,8 @@ public sealed partial class MooQuest
         SetupGui();
         ui = Mathf.Max(.5f, Screen.height / 540f);
         GUI.matrix = Matrix4x4.Scale(new Vector3(ui, ui, 1));
-        float w = Screen.width / ui, h = 540;
+        // Normally 540 tall; taller only when the scale bottoms out, so bottom-anchored UI stays on screen.
+        float w = Screen.width / ui, h = Screen.height / ui;
 
         switch (state.status)
         {
@@ -373,7 +396,7 @@ public sealed partial class MooQuest
         else if (Button(new Rect(w / 2 - bw / 2, y, bw, 52), "Start the adventure!")) ShowSelect();
         Box(new Rect(0, h - 86, w, 70), new Color(.22f, .15f, .12f, .35f));
         if (Mathf.Repeat(time, 1.2f) < .8f)
-            Shadowed(new Rect(0, h - 80, w, 30), "Press SPACE to start", centerStyle, Color.white);
+            Shadowed(new Rect(0, h - 80, w, 30), touch ? "Tap the button to start" : "Press SPACE to start", centerStyle, Color.white);
         Shadowed(new Rect(0, h - 48, w, 30), "Tickle critters, rescue cows, and outsmart a very grumpy goat.", smallStyleCentered(), new Color(1, 1, 1, .9f));
     }
 
@@ -397,18 +420,22 @@ public sealed partial class MooQuest
                 i == selected ? MooData.Hex("ffe066") : Color.white);
         }
         MooCharacter c = MooData.Characters[selected];
-        float pw = Mathf.Min(640, w - 40), px = (w - pw) / 2, py = h - 200;
-        Panel(new Rect(px, py, pw, 186), new Color(.22f, .15f, .12f, .88f));
-        Shadowed(new Rect(px + 18, py + 10, 300, 32), c.Name, new GUIStyle(nameStyle) { alignment = TextAnchor.MiddleLeft, fontSize = 26 }, c.Hair == MooData.Hex("5b3a23") ? MooData.Hex("e0b48a") : c.Hair);
-        Shadowed(new Rect(px + 18, py + 40, pw - 36, 22), c.Looks + "  ·  " + c.Tagline, smallStyle, Color.white);
-        Stat(px + 18, py + 74, "Speed", c.Speed / 7f);
-        Stat(px + 18, py + 98, "Tickle power", c.Power / 2f);
-        Stat(px + 18, py + 122, "Giggles", c.MaxGiggles / 6f);
-        Shadowed(new Rect(px + 300, py + 70, pw - 318, 26), "Special: " + c.Special, new GUIStyle(smallStyle) { fontStyle = FontStyle.Bold }, MooData.Hex("ffe066"));
-        Shadowed(new Rect(px + 300, py + 94, pw - 318, 50), c.SpecialInfo, smallStyle, Color.white);
-        if (Button(new Rect(px + 18, py + 146, 44, 34), "<")) { selected = (selected + 3) % 4; Play(swishClip); }
-        if (Button(new Rect(px + 68, py + 146, 44, 34), ">")) { selected = (selected + 1) % 4; Play(swishClip); }
-        if (Button(new Rect(px + pw - 238, py + 140, 220, 40), "Let's moo-ve!")) Choose(selected);
+        float pw = Mathf.Min(640, w - 40), px = (w - pw) / 2, py = h - 212;
+        Panel(new Rect(px, py, pw, 200), new Color(.22f, .15f, .12f, .88f));
+        var heading = new GUIStyle(nameStyle) { alignment = TextAnchor.MiddleLeft, fontSize = 26 };
+        Shadowed(new Rect(px + 18, py + 8, 300, 34), c.Name, heading, c.Hair == MooData.Hex("5b3a23") ? MooData.Hex("e0b48a") : c.Hair);
+        float nameWidth = heading.CalcSize(new GUIContent(c.Name)).x;
+        Shadowed(new Rect(px + 30 + nameWidth, py + 16, pw - 48 - nameWidth, 22), c.Looks, smallStyle, new Color(1, 1, 1, .75f));
+        // Two lines, so the longest taglines aren't cut off.
+        Shadowed(new Rect(px + 18, py + 42, pw - 36, 40), c.Tagline, smallStyle, Color.white);
+        Stat(px + 18, py + 88, "Speed", c.Speed / 7f);
+        Stat(px + 18, py + 112, "Tickle power", c.Power / 2f);
+        Stat(px + 18, py + 136, "Giggles", c.MaxGiggles / 6f);
+        Shadowed(new Rect(px + 300, py + 84, pw - 318, 26), "Special: " + c.Special, new GUIStyle(smallStyle) { fontStyle = FontStyle.Bold }, MooData.Hex("ffe066"));
+        Shadowed(new Rect(px + 300, py + 108, pw - 318, 44), c.SpecialInfo, smallStyle, Color.white);
+        if (Button(new Rect(px + 18, py + 160, 44, 34), "<")) { selected = (selected + 3) % 4; Play(swishClip); }
+        if (Button(new Rect(px + 68, py + 160, 44, 34), ">")) { selected = (selected + 1) % 4; Play(swishClip); }
+        if (Button(new Rect(px + pw - 238, py + 154, 220, 40), "Let's moo-ve!")) Choose(selected);
     }
 
     private void Stat(float x, float y, string label, float amount)
@@ -437,11 +464,15 @@ public sealed partial class MooQuest
             GUI.DrawTexture(new Rect(rx + 10 + i * 28, 44, 24, 24), (save.pieces & (1 << i)) != 0 ? bell : emptyBell);
         if (hasKey) GUI.DrawTexture(new Rect(rx + 150, 44, 24, 24), acornIcon);
 
-        float sw = 220, sx = 14, sy = h - 46;
-        Panel(new Rect(sx, sy, sw, 34), new Color(.22f, .15f, .12f, .75f));
-        float ready = 1 - Mathf.Clamp01(specialCooldown / me.Cooldown);
-        Box(new Rect(sx + 6, sy + 22, (sw - 12) * ready, 6), ready >= 1 ? MooData.Hex("ffe066") : MooData.Hex("ff8fc8"));
-        Shadowed(new Rect(sx + 8, sy + 1, sw - 16, 22), (ready >= 1 ? "K: " : "...") + me.Special, smallStyle, Color.white);
+        // On touch screens the Special button shows its own charge, and the joystick sits here.
+        if (!touch && CurrentLine == null)
+        {
+            float sw = 220, sx = 14, sy = h - 46;
+            Panel(new Rect(sx, sy, sw, 34), new Color(.22f, .15f, .12f, .75f));
+            float ready = 1 - Mathf.Clamp01(specialCooldown / me.Cooldown);
+            Box(new Rect(sx + 6, sy + 22, (sw - 12) * ready, 6), ready >= 1 ? MooData.Hex("ffe066") : MooData.Hex("ff8fc8"));
+            Shadowed(new Rect(sx + 8, sy + 1, sw - 16, 22), (ready >= 1 ? "K: " : "...") + me.Special, smallStyle, Color.white);
+        }
 
         if (bannerTime > 0)
         {
@@ -523,7 +554,8 @@ public sealed partial class MooQuest
         if (shown >= line[1].Length && Mathf.Repeat(time, 1) < .7f)
         {
             smallStyle.normal.textColor = MooData.Hex("b05a8a");
-            GUI.Label(new Rect(bx + bw - 190, by + 108, 180, 24), "SPACE or tap to continue", smallStyle);
+            string next = touch ? "Tap to continue" : "SPACE to continue";
+            GUI.Label(new Rect(bx + bw - 24 - smallStyle.CalcSize(new GUIContent(next)).x, by + 108, 200, 24), next, smallStyle);
         }
         if (state.status == "dialogue" && Event.current.type == EventType.MouseDown && rect.Contains(Event.current.mousePosition))
         {
@@ -535,12 +567,16 @@ public sealed partial class MooQuest
     private void PauseScreen(float w, float h)
     {
         Box(new Rect(0, 0, w, h), new Color(0, 0, 0, .45f));
-        Shadowed(new Rect(0, h / 2 - 90, w, 70), "Paused", titleStyle, Color.white);
-        Shadowed(new Rect(0, h / 2 - 20, w, 30), "The cows are waiting patiently. (They're very good at it.)", centerStyle, Color.white);
-        Shadowed(new Rect(20, h / 2 + 14, w - 40, 50),
-            "Move: arrows / WASD    Tickle & talk: SPACE    Special: K or SHIFT    Pause: ESC",
+        float pw = Mathf.Min(660, w - 40), px = (w - pw) / 2;
+        Panel(new Rect(px, h / 2 - 110, pw, 250), new Color(.22f, .15f, .12f, .9f));
+        Shadowed(new Rect(0, h / 2 - 104, w, 70), "Paused", titleStyle, Color.white);
+        Shadowed(new Rect(px + 20, h / 2 - 34, pw - 40, 30), "The cows are waiting patiently. (They're very good at it.)", centerStyle, Color.white);
+        Shadowed(new Rect(px + 20, h / 2, pw - 40, 44),
+            touch ? "Move: joystick    Tickle & talk: Tickle    Special: Special    Pause: II"
+                  : "Move: arrows / WASD    Tickle & talk: SPACE    Special: K or SHIFT    Pause: ESC",
             smallStyleCentered(), new Color(1, .9f, .6f));
-        if (Button(new Rect(w / 2 - 110, h / 2 + 70, 220, 48), "Keep playing")) SetPaused("0");
+        if (Button(new Rect(w / 2 - 230, h / 2 + 60, 220, 48), "Keep playing")) SetPaused("0");
+        if (Button(new Rect(w / 2 + 10, h / 2 + 60, 220, 48), muted ? "Sound: off" : "Sound: on")) SetMuted(muted ? "0" : "1");
     }
 
     private void VictoryScreen(float w, float h)
@@ -558,7 +594,7 @@ public sealed partial class MooQuest
         string credits =
             Hero.Name + " saved Moo-ville!\n" +
             "Buttercup, Moo-donna, and Sir Moos-a-Lot are home, and Grumbleweed has a brand-new herd of friends.\n\n" + crown +
-            "\n\nStarring Kaite, Laura, Grace, and Audrey.";
+            "\n\nStarring Kaite, Laura, Grace, and Audrey.\nCharacter models by Kenney (kenney.nl).";
         Shadowed(new Rect(px + 20, 124, pw - 40, 230), credits, new GUIStyle(centerStyle) { alignment = TextAnchor.UpperCenter }, Color.white);
         if (partyTime > 2)
         {

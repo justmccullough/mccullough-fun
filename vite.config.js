@@ -6,7 +6,8 @@ export default defineConfig({
   server: {
     open: true,
     watch: {
-      ignored: ['**/unity/PasturePong/**'],
+      // Unity projects churn (and lock) files while building; the dev server never needs them.
+      ignored: ['**/unity/**'],
     },
   },
 })

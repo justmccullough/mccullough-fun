@@ -14,7 +14,9 @@ public sealed partial class MooQuest : MonoBehaviour
     {
         public string status = "loading", character = "", area = "", message = "Loading the farm...";
         public int giggles, maxGiggles, moonies, pieces;
-        public bool hasSave, muted, crown;
+        public bool hasSave, muted, crown, touch;
+        // How charged the special move is (0 to 1), so the touch Special button can fill up.
+        public float special = 1;
     }
 
     [Serializable]
@@ -35,10 +37,14 @@ public sealed partial class MooQuest : MonoBehaviour
     public SaveData save = new SaveData();
     public int selected;
     public bool muted;
+    // True while the player is using the touch controls; prompts then say "tap" instead of naming keys.
+    public bool touch;
 
     public bool actionPressed, specialPressed, pausePressed, leftPressed, rightPressed;
     private Vector2 stick, keyMove;
     private string resumeStatus = "playing", lastJson = "";
+    // Briefly ignores the action button after a conversation ends, so mashing through text doesn't start it again.
+    private float actionLock;
 
     private readonly List<string[]> lines = new List<string[]>();
     private int lineIndex;
@@ -135,8 +141,16 @@ public sealed partial class MooQuest : MonoBehaviour
         Publish();
     }
 
+    // The web page calls this with "1" on touch screens; any key press switches back to keyboard prompts.
+    public void SetTouch(string value)
+    {
+        touch = value == "1";
+        Publish();
+    }
+
     public void SetStick(string value)
     {
+        touch = true;
         string[] parts = (value ?? "").Split(',');
         if (parts.Length != 2 ||
             !float.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out float x) ||
@@ -151,6 +165,7 @@ public sealed partial class MooQuest : MonoBehaviour
 
     public void Press(string button)
     {
+        touch = true;
         switch (button)
         {
             case "action": actionPressed = true; break;
@@ -234,7 +249,7 @@ public sealed partial class MooQuest : MonoBehaviour
         lines.Clear();
         foreach (string line in script)
         {
-            string text = line.Replace("{name}", HasSave ? Hero.Name : "Friend");
+            string text = Prompts(line.Replace("{name}", HasSave ? Hero.Name : "Friend"));
             int bar = text.IndexOf('|');
             lines.Add(bar < 0 ? new[] { "", text } : new[] { text.Substring(0, bar), text.Substring(bar + 1) });
         }
@@ -244,6 +259,11 @@ public sealed partial class MooQuest : MonoBehaviour
         state.status = "dialogue";
         AnnounceLine();
     }
+
+    // Fills in {Tickle} and {Special} with the right instructions for keyboard or touch.
+    public string Prompts(string text) => text
+        .Replace("{Tickle}", touch ? "Tap Tickle" : "Press SPACE")
+        .Replace("{Special}", touch ? "Tap Special" : "Press K or SHIFT");
 
     private void AnnounceLine()
     {
@@ -268,6 +288,9 @@ public sealed partial class MooQuest : MonoBehaviour
             return;
         }
         state.status = "playing";
+        actionLock = .35f;
+        // Don't leave the last line of the conversation showing on the page.
+        if (areaIndex >= 0) state.message = MooData.Areas[areaIndex].Name + ": " + MooData.Areas[areaIndex].Subtitle;
         Action done = dialogueDone;
         dialogueDone = null;
         done?.Invoke();
@@ -288,6 +311,7 @@ public sealed partial class MooQuest : MonoBehaviour
 
     private void ReadKeyboard()
     {
+        if (touch && Input.anyKeyDown && !Input.GetMouseButtonDown(0)) { touch = false; Publish(); }
         if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter) ||
             Input.GetKeyDown(KeyCode.J) || Input.GetKeyDown(KeyCode.Z) || Input.GetKeyDown(KeyCode.E)) actionPressed = true;
         if (Input.GetKeyDown(KeyCode.K) || Input.GetKeyDown(KeyCode.X) || Input.GetKeyDown(KeyCode.LeftShift) ||
@@ -354,6 +378,11 @@ public sealed partial class MooQuest : MonoBehaviour
                 Dialogue(dt);
                 break;
             case "playing":
+                if (actionLock > 0)
+                {
+                    actionLock -= dt;
+                    actionPressed = false;
+                }
                 PlayStep(dt);
                 break;
             case "victory":
@@ -421,6 +450,8 @@ public sealed partial class MooQuest : MonoBehaviour
         state.pieces = save.pieces;
         state.muted = muted;
         state.crown = save.crown;
+        state.touch = touch;
+        state.special = HasSave ? Mathf.Round((1 - Mathf.Clamp01(specialCooldown / Hero.Cooldown)) * 20) / 20 : 1;
         string json = JsonUtility.ToJson(state);
         if (json == lastJson) return;
         lastJson = json;

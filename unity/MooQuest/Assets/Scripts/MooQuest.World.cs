@@ -210,7 +210,7 @@ public sealed partial class MooQuest
         batch.Add(Shape.Cube, new Vector3(0, -.1f, 10), new Vector3(80, .2f, 60), home.Ground);
         batch.Add(Shape.Cube, new Vector3(0, .2f, 0), new Vector3(10.5f, .4f, 3.2f), MooData.Hex("c99a5b"));
         batch.Add(Shape.Cube, new Vector3(0, .41f, -1.55f), new Vector3(10.5f, .06f, .12f), MooData.Hex("a77a45"));
-        Barn(batch, new Vector3(0, 0, 9), 10, 6);
+        Barn(batch, new Vector3(0, 0, 9), 10, 6, false);
         for (int i = -1; i <= 1; i += 2)
         {
             Tree(batch, new Vector3(i * 9.5f, 0, 6), MooData.Hex("3f8f3a"), MooData.Hex("58a84a"), false);
@@ -534,7 +534,8 @@ public sealed partial class MooQuest
         }
     }
 
-    private static void Barn(MooArt.Batch batch, Vector3 c, float w, float d)
+    // The title stage leaves out the hayloft window, which otherwise peeks out from behind the "MOO QUEST" title.
+    private static void Barn(MooArt.Batch batch, Vector3 c, float w, float d, bool loft = true)
     {
         Color red = MooData.Hex("c8453b"), roof = MooData.Hex("8f2f2a"), trim = Color.white;
         batch.Add(Shape.Cube, c + new Vector3(0, 1.6f, 0), new Vector3(w - .3f, 3.2f, d - .3f), red);
@@ -548,6 +549,7 @@ public sealed partial class MooQuest
         batch.Add(Shape.Cube, new Vector3(c.x, 1.2f, front - .1f), new Vector3(2.1f, 2.1f, .1f), red);
         batch.Add(Shape.Cube, new Vector3(c.x, 1.2f, front - .15f), new Vector3(2.9f, .15f, .05f), trim, new Vector3(0, 0, 45));
         batch.Add(Shape.Cube, new Vector3(c.x, 1.2f, front - .15f), new Vector3(2.9f, .15f, .05f), trim, new Vector3(0, 0, -45));
+        if (!loft) return;
         batch.Add(Shape.Cube, new Vector3(c.x, 3.3f, front - .05f), new Vector3(1f, .9f, .1f), trim);
         batch.Add(Shape.Cube, new Vector3(c.x, 3.3f, front - .1f), new Vector3(.8f, .7f, .1f), MooData.Hex("e8b64f"));
     }
