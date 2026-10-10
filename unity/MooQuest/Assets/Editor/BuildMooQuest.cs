@@ -148,6 +148,7 @@ public static class BuildMooQuest
         Settle(game);
         Require(game.Hero.Name == "Laura" && game.areaIndex == 0 && game.Status == "playing", "Choosing Laura starts the intro then the barnyard");
         Require(game.giggles == game.Hero.MaxGiggles && game.HasSave, "Fresh giggles and an auto-save");
+        Require(game.state.message == MooData.Areas[0].Name + ": " + MooData.Areas[0].Subtitle, "Status line moves on after a conversation");
 
         // Gates and walls.
         Vector2Int gate2 = game.Find('2'), gate1 = game.Find('1');

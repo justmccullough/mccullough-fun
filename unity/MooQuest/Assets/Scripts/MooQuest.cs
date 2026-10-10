@@ -289,6 +289,8 @@ public sealed partial class MooQuest : MonoBehaviour
         }
         state.status = "playing";
         actionLock = .35f;
+        // Don't leave the last line of the conversation showing on the page.
+        if (areaIndex >= 0) state.message = MooData.Areas[areaIndex].Name + ": " + MooData.Areas[areaIndex].Subtitle;
         Action done = dialogueDone;
         dialogueDone = null;
         done?.Invoke();
